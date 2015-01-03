@@ -39,9 +39,6 @@
 /* Internal representation of timer.  */
 struct timer
 {
-  /* Notification mechanism.  */
-  int sigev_notify;
-
   /* Parameters for the thread to be started for SIGEV_THREAD.  */
   void (*thrfunc) (sigval_t);
   sigval_t sival;
@@ -108,7 +105,6 @@ int timer_create_sigev_thread(clockid_t clock_id,
   /* Copy the thread parameters the user provided.  */
   newp->sival = evp->sigev_value;
   newp->thrfunc = evp->sigev_notify_function;
-  newp->sigev_notify = SIGEV_THREAD;
 
   /* We cannot simply copy the thread attributes since the
      implementation might keep internal information for
@@ -197,6 +193,11 @@ static void *timer_helper_thread (void *arg)
     //LIBC_CANCEL_RESET (oldtype);
 
     if (result > 0) {
+      if (si.si_code == SI_TKILL) {
+        /* The thread is canceled.  */
+        pthread_exit (NULL);
+      }
+
       if (si.si_code == SI_TIMER) {
         struct timer *tk = (struct timer *) si.si_ptr;
 
@@ -228,9 +229,6 @@ static void *timer_helper_thread (void *arg)
 
         pthread_mutex_unlock (&active_timer_sigev_thread_lock);
       }
-      else if (si.si_code == SI_TKILL)
-        /* The thread is canceled.  */
-        pthread_exit (NULL);
     }
   }
 }
