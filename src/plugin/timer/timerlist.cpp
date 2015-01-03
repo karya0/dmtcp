@@ -126,10 +126,10 @@ void TimerList::preCheckpoint()
   for (_iter = _timerInfo.begin(); _iter != _timerInfo.end(); _iter++) {
     timer_t virtId = _iter->first;
     timer_t realId = VIRTUAL_TO_REAL_TIMER_ID(virtId);
-    TimerInfo& tinfo = _iter->second;
-    JASSERT(_real_timer_gettime(realId, &tinfo.curr_timerspec) == 0)
+    TimerInfo *tinfo = _iter->second;
+    JASSERT(_real_timer_gettime(realId, &tinfo->curr_timerspec) == 0)
       (virtId) (realId) (JASSERT_ERRNO);
-    tinfo.overrun = _real_timer_getoverrun(realId);
+    tinfo->overrun = _real_timer_getoverrun(realId);
   }
 }
 
@@ -160,29 +160,29 @@ void TimerList::postRestart()
     timer_t realId;
     timer_t virtId = _iter->first;
     struct sigevent *sevp = NULL;
-    TimerInfo& tinfo = _iter->second;
-    clockid_t clockid = VIRTUAL_TO_REAL_CLOCK_ID(tinfo.clockid);
-    if (!tinfo.sevp_null) {
-      sevp = &tinfo.sevp;
+    TimerInfo *tinfo = _iter->second;
+    clockid_t clockid = VIRTUAL_TO_REAL_CLOCK_ID(tinfo->clockid);
+    if (!tinfo->sevp_null) {
+      sevp = &tinfo->sevp;
     }
     JASSERT(_real_timer_create(clockid, sevp, &realId) == 0)
       (virtId) (JASSERT_ERRNO);
     _timerVirtIdTable.updateMapping(virtId, realId);
-    if (tinfo.curr_timerspec.it_value.tv_sec != 0 ||
-        tinfo.curr_timerspec.it_value.tv_nsec != 0) {
+    if (tinfo->curr_timerspec.it_value.tv_sec != 0 ||
+        tinfo->curr_timerspec.it_value.tv_nsec != 0) {
       struct itimerspec tspec;
-      if (tinfo.flags & TIMER_ABSTIME) {
+      if (tinfo->flags & TIMER_ABSTIME) {
         // The timer should expire when the clock time equals the time
         // specified in initial_timerspec.
         // FIXME: For clocks measugin CPU time for processes and threads, such
         // as CLOCK_PROCESS_CPUTIME_ID and CLOCK_THREAD_CPUTIME_ID, we need to
         // adjust the value of initial_timerspec to allow
         // the changes on the time on these clocks after restart.
-        tspec = tinfo.initial_timerspec;
+        tspec = tinfo->initial_timerspec;
       } else {
-        tspec = tinfo.curr_timerspec;
+        tspec = tinfo->curr_timerspec;
       }
-      JASSERT(_real_timer_settime(realId, tinfo.flags, &tspec, NULL) == 0)
+      JASSERT(_real_timer_settime(realId, tinfo->flags, &tspec, NULL) == 0)
         (virtId) (JASSERT_ERRNO);
       JTRACE("Restoring timer") (realId) (virtId);
     }
@@ -193,16 +193,15 @@ int TimerList::getoverrun(timer_t id)
 {
   _do_lock_tbl();
   JASSERT(_timerInfo.find(id) != _timerInfo.end());
-  int ret = _timerInfo[id].overrun;
-  _timerInfo[id].overrun = 0;
+  int ret = _timerInfo[id]->overrun;
+  _timerInfo[id]->overrun = 0;
   _do_unlock_tbl();
   return ret;
 }
 
 timer_t TimerList::on_timer_create(timer_t realId, clockid_t clockid,
-                                struct sigevent *sevp)
+                                   struct sigevent *sevp)
 {
-  TimerInfo tinfo;
   timer_t virtId;
   _do_lock_tbl();
   JASSERT(!_timerVirtIdTable.realIdExists(realId)) (realId);
@@ -210,13 +209,14 @@ timer_t TimerList::on_timer_create(timer_t realId, clockid_t clockid,
   JASSERT(_timerVirtIdTable.getNewVirtualId(&virtId));
   _timerVirtIdTable.updateMapping(virtId, realId);
 
-  memset(&tinfo, 0, sizeof(tinfo));
-  tinfo.clockid = clockid;
+  TimerInfo *tinfo = (TimerInfo*) JALLOC_MALLOC(sizeof(TimerInfo));
+  memset(tinfo, 0, sizeof(tinfo));
+  tinfo->clockid = clockid;
   if (sevp == NULL) {
-    tinfo.sevp_null = true;
+    tinfo->sevp_null = true;
   } else {
-    tinfo.sevp_null = false;
-    tinfo.sevp = *sevp;
+    tinfo->sevp_null = false;
+    tinfo->sevp = *sevp;
   }
 
   _timerInfo[virtId] = tinfo;
@@ -238,8 +238,8 @@ void TimerList::on_timer_settime(timer_t timerid, int flags,
 {
   _do_lock_tbl();
   JASSERT(_timerInfo.find(timerid) != _timerInfo.end());
-  _timerInfo[timerid].flags = flags;
-  _timerInfo[timerid].initial_timerspec = *new_value;
+  _timerInfo[timerid]->flags = flags;
+  _timerInfo[timerid]->initial_timerspec = *new_value;
   _do_unlock_tbl();
 }
 

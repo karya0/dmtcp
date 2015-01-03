@@ -102,8 +102,8 @@ namespace dmtcp {
     private:
       void removeStaleClockIds();
 
-      map<timer_t, TimerInfo> _timerInfo;
-      map<timer_t, TimerInfo>::iterator _iter;
+      map<timer_t, TimerInfo*> _timerInfo;
+      map<timer_t, TimerInfo*>::iterator _iter;
       map<clockid_t, pid_t> _clockPidList;
       map<clockid_t, pthread_t> _clockPthreadList;
 
