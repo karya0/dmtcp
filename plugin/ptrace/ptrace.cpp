@@ -21,7 +21,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "jalloc.h"
 #include "jassert.h"
 #include "ptrace.h"
 #include "ptraceinfo.h"
@@ -36,7 +35,6 @@ EXTERNC int dmtcp_ptrace_enabled() { return 1; }
 
 void ptraceInit()
 {
-  PtraceInfo::instance().createSharedFile();
   PtraceInfo::instance().mapSharedFile();
 }
 
@@ -76,6 +74,22 @@ extern "C" void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
 
     case DMTCP_EVENT_ATFORK_CHILD:
       originalStartup = 1;
+      break;
+
+    case DMTCP_EVENT_PRE_CKPT:
+      //PtraceInfo::instance().preCkpt();
+      break;
+
+    case DMTCP_EVENT_POST_CKPT:
+      //PtraceInfo::instance().postCkpt(data->postCkptInfo.isRestart);
+      break;
+
+    case DMTCP_EVENT_POST_RESTART:
+      //PtraceInfo::instance().postRestart();
+      break;
+
+    case DMTCP_EVENT_LEADER_ELECTION:
+      //PtraceInfo::instance().leaderElection();
       break;
 
     default:

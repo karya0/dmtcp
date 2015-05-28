@@ -126,8 +126,8 @@ void ptrace_process_pre_suspend_user_thread()
 
 void ptrace_process_resume_user_thread(int isRestart)
 {
+  ptrace_attach_threads(isRestart);
   if (PtraceInfo::instance().isPtracing()) {
-    ptrace_attach_threads(isRestart);
   }
   JTRACE("Waiting for Sup Attach") (GETTID());
   PtraceInfo::instance().waitForSuperiorAttach();
@@ -415,7 +415,7 @@ static void ptrace_detach_user_threads ()
     void *data = (void*) (unsigned long) dmtcp_get_ckpt_signal();
     pstate = procfs_state(inferiors[i]);
     if (pstate == PTRACE_PROC_INVALID) {
-      JTRACE("Inferior does not exist.") (inferior);
+      JNOTE("Inferior does not exist.") (inferior);
       PtraceInfo::instance().eraseInferior(inferior);
       continue;
     }
@@ -448,7 +448,7 @@ static void ptrace_detach_user_threads ()
     if (pstate == PTRACE_PROC_STOPPED) {
       kill(inferior, SIGCONT);
     }
-    JTRACE("Detached thread") (inferior);
+    JNOTE("Detached thread") (inferior);
   }
 }
 

@@ -36,10 +36,12 @@
 
 #define _real_wait4 NEXT_FNC(wait4)
 #define _real_open NEXT_FNC(open)
+#define _real_close NEXT_FNC(close)
 #define _real_lseek NEXT_FNC(lseek)
 #define _real_unlink NEXT_FNC(unlink)
 #define _real_dup2 NEXT_FNC(dup2)
 #define _real_mmap NEXT_FNC(mmap)
+#define _real_munmap NEXT_FNC(munmap)
 
 #define _real_ptrace(request, pid, addr, data) \
   NEXT_FNC(ptrace)((enum __ptrace_request) request, pid, addr, data)

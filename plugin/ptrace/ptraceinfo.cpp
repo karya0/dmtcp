@@ -38,6 +38,7 @@
 #include "jfilesystem.h"
 
 using namespace dmtcp;
+static bool _ptrace_performing_ckpt = false;
 
 static PtraceInfo *_ptraceInfo = NULL;
 PtraceInfo& PtraceInfo::instance()
@@ -46,11 +47,12 @@ PtraceInfo& PtraceInfo::instance()
   return *_ptraceInfo;
 }
 
-void PtraceInfo::createSharedFile()
+int PtraceInfo::openSharedFile()
 {
   struct stat statbuf;
-  int fd = dmtcp_get_ptrace_fd();
-  if (fstat(fd, &statbuf) == -1 && errno == EBADF) {
+  _preExistingFile = true;
+  int ptrace_fd = dmtcp_get_ptrace_fd();
+  if (fstat(ptrace_fd, &statbuf) == -1 && errno == EBADF) {
     char path[PATH_MAX];
     int ptrace_fd = dmtcp_get_ptrace_fd();
 
@@ -64,26 +66,94 @@ void PtraceInfo::createSharedFile()
     JASSERT(_real_lseek(fd, _sharedDataSize, SEEK_SET) == (off_t)_sharedDataSize)
       (path) (_sharedDataSize) (JASSERT_ERRNO);
     Util::writeAll(fd, "", 1);
-    JASSERT(_real_unlink(path) == 0) (path) (JASSERT_ERRNO);
+    _real_unlink(path);
     JASSERT(_real_dup2(fd, ptrace_fd) == ptrace_fd) (fd) (ptrace_fd);
     close(fd);
+    _preExistingFile = false;
   }
+  return ptrace_fd;
 }
 
 void PtraceInfo::mapSharedFile()
 {
-  int fd = dmtcp_get_ptrace_fd();
+  //JASSERT(!_ptrace_performing_ckpt);
+  int fd = openSharedFile();
 
-  _sharedData = (PtraceSharedData*) _real_mmap(0, _sharedDataSize,
+  _sharedData = (PtraceSharedData*) _real_mmap(_prevSharedDataAddr,
+                                               _sharedDataSize,
                                                PROT_READ|PROT_WRITE,
                                                MAP_SHARED, fd, 0);
-  JASSERT(_sharedData != MAP_FAILED) (fd) (_sharedDataSize);
+  JASSERT(_sharedData != MAP_FAILED)
+    (fd) (_sharedDataSize) (JASSERT_ERRNO);
 
-  _sharedData->init();
+  if (!_preExistingFile) {
+    _sharedData->initLocks();
+  }
+}
+
+void PtraceInfo::leaderElection()
+{
+  _isCkptLeader = false;
+  if (_sharedData != NULL) {
+    _sharedData->setCkptLeader();
+  }
+  _ptrace_performing_ckpt = true;
+}
+
+void PtraceInfo::preCkpt()
+{
+  if (_sharedData != NULL && _sharedData->isCkptLeader()) {
+    _isCkptLeader = true;
+
+    _savedSharedData = (PtraceSharedData*) _real_mmap(0, _sharedDataSize,
+                                                      PROT_READ|PROT_WRITE,
+                                                      MAP_PRIVATE|MAP_ANONYMOUS,
+                                                      -1, 0);
+    JASSERT(_savedSharedData != MAP_FAILED);
+    memcpy(_savedSharedData, _sharedData, _sharedDataSize);
+    JNOTE("CKPTLEADER");
+  }
+
+  JASSERT(_real_munmap(_sharedData, _sharedDataSize) == 0) (JASSERT_ERRNO);
+  _prevSharedDataAddr = _sharedData;
+  _sharedData = NULL;
+}
+
+void PtraceInfo::postRestart()
+{
+  _ptrace_performing_ckpt = false;
+  if (_isCkptLeader) {
+    openSharedFile();
+    mapSharedFile();
+    memcpy(_sharedData, _savedSharedData, _sharedDataSize);
+    JASSERT(_real_munmap(_savedSharedData, _sharedDataSize) == 0) (JASSERT_ERRNO);
+    _savedSharedData = NULL;
+    JNOTE("Initialized locks");
+  }
+}
+
+void PtraceInfo::postCkpt(bool isRestart)
+{
+  _ptrace_performing_ckpt = false;
+  if (_isCkptLeader) {
+    if (!isRestart) {
+      mapSharedFile();
+      JASSERT(memcmp(_sharedData, _savedSharedData, _sharedDataSize) == 0);
+      JASSERT(_real_munmap(_savedSharedData, _sharedDataSize) == 0) (JASSERT_ERRNO);
+      _savedSharedData = NULL;
+    }
+    _sharedData->postCkpt();
+  } else {
+    JNOTE("NO CKPTLEADER");
+    mapSharedFile();
+  }
 }
 
 bool PtraceInfo::isPtracing()
 {
+  if (_sharedData == NULL && _ptrace_performing_ckpt) {
+    return false;
+  }
   if (_sharedData == NULL) {
     mapSharedFile();
   }
@@ -270,6 +340,7 @@ void PtraceInfo::waitForSuperiorAttach()
   if (inf == NULL) {
     return;
   }
+  JNOTE("SemWait") (GETTID());
   inf->semWait();
   inf->semDestroy();
 }
@@ -279,5 +350,6 @@ void PtraceInfo::processPreResumeAttach(pid_t inferior)
 {
   Inferior *inf = _sharedData->getInferior(inferior);
   JASSERT(inf != NULL) (inferior);
+  JNOTE("SemPost") (inferior);
   inf->semPost();
 }

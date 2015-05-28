@@ -120,18 +120,28 @@ namespace dmtcp {
 
     public:
       PtraceSharedData()
-        : _isPtracing(false)
-        , _numInferiors(0) { }
+        : _ckptLeader(-1)
+        , _isPtracing(false)
+        , _numInferiors(0)
+    {}
 
+      bool isCkptLeader(void) { return _ckptLeader == getpid(); }
+      void setCkptLeader(void) { _ckptLeader = getpid(); }
       bool isPtracing(void) { return _isPtracing; }
       void setPtracing(void) { _isPtracing = true; }
       size_t numInferiors(void) { return _numInferiors; }
       pthread_mutex_t *condMutexPtr() { return &_condMutex; }
 
-      void init(void)
+      void initLocks(void)
       {
         pthread_mutex_init(&_lock, NULL);
         pthread_mutex_init(&_condMutex, NULL);
+      }
+
+      void destroy(void)
+      {
+        pthread_mutex_destroy(&_lock);
+        pthread_mutex_destroy(&_condMutex);
       }
 
       Inferior *getInferior(pid_t tid)
@@ -175,7 +185,19 @@ namespace dmtcp {
         do_unlock();
       }
 
+      void postCkpt()
+      {
+        initLocks();
+        for (size_t i = 0; i < MAX_INFERIORS; i++) {
+          if (_inferiors[i].tid() != 0 &&
+              _inferiors[i].superior() != 0) {
+            _inferiors[i].semInit();
+          }
+        }
+      }
+
     private:
+      pid_t  _ckptLeader;
       bool   _isPtracing;
       size_t _numInferiors;
       pthread_mutex_t _lock;
@@ -186,7 +208,11 @@ namespace dmtcp {
   class PtraceInfo {
     public:
       PtraceInfo()
-        : _sharedData (NULL)
+        : _isCkptLeader (false)
+        , _preExistingFile(false)
+        , _sharedData (NULL)
+        , _prevSharedDataAddr (NULL)
+        , _savedSharedData (NULL)
       {
         _sharedDataSize = CEIL(sizeof(PtraceSharedData), Util::pageSize());
       }
@@ -201,8 +227,13 @@ namespace dmtcp {
       vector<pid_t> getInferiorVector(pid_t tid);
       void insertInferior(Inferior *inf);
 
-      void createSharedFile();
+      int  openSharedFile();
       void mapSharedFile();
+
+      void preCkpt();
+      void leaderElection();
+      void postCkpt(bool isRestart);
+      void postRestart();
 
       void setLastCmd(pid_t tid, int lastCmd);
       void insertInferior(pid_t tid);
@@ -222,8 +253,12 @@ namespace dmtcp {
       void processPreResumeAttach(pid_t inferior);
 
     private:
-      PtraceSharedData *_sharedData;
+      bool              _isCkptLeader;
+      bool              _preExistingFile;
       size_t            _sharedDataSize;
+      PtraceSharedData *_sharedData;
+      PtraceSharedData *_prevSharedDataAddr;
+      PtraceSharedData *_savedSharedData;
       map< pid_t, vector<pid_t> > _supToInfsMap;
       map< pid_t, pid_t > _infToSupMap;
   };
