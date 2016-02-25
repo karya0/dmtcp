@@ -47,6 +47,7 @@ int main()
         fflush(stdout);
       }
       fprintf(fp, "%ld", count++);
+      sleep(1);
     }
 
     fprintf(stdout, "I have returned\n");
