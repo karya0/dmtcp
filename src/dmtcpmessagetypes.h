@@ -143,18 +143,20 @@ namespace dmtcp
     uint32_t    keyLen;
     uint32_t    valLen;
 
+    char        progname[32];
+    char        hostname[32];
+
     uint32_t numPeers;
+    uint32_t numChildCoordinators;
     uint32_t isRunning;
     uint32_t coordCmd;
+    uint32_t exitAfterCkpt;
     int32_t coordCmdStatus;
 
     uint64_t coordTimeStamp;
 
     uint32_t theCheckpointInterval;
     struct in_addr ipAddr;
-
-    uint32_t exitAfterCkpt;
-    uint32_t padding;
 
     DmtcpMessage ( DmtcpMessageType t = DMT_NULL );
     void assertValid() const;
