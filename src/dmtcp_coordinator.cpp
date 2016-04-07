@@ -633,7 +633,7 @@ void DmtcpCoordinator::onData(CoordClient *client)
     case DMT_REGISTER_NAME_SERVICE_DATA_MULTI:
     {
       JTRACE ("received REGISTER_NAME_SERVICE_DATA msg") (client->identity());
-      lookupService.registerData(msg, (const void*) extraData);
+      registerData(msg, (const void*) extraData);
     }
     break;
 
@@ -1495,6 +1495,7 @@ void DmtcpCoordinator::registerData(const DmtcpMessage &hello_remote,
     *(parentSock) << msg;
     parentSock->writeAll((const char*) extraData, msg.extraBytes);
 
+    // If client asked for synchronous registry, do that.
     if (remote.isValid()) {
       JTRACE("Waiting for NS response from parent coordinator...");
       msg.poison();
