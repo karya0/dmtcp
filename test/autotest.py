@@ -349,12 +349,12 @@ else:
     os.environ['LD_LIBRARY_PATH'] = os.getenv("PWD")+"/lib"
 
 #run the coordinator
-coordinatorCmd = BIN + "dmtcp_coordinator"
+coordinatorCmdStr = BIN + "dmtcp_coordinator"
 if args.parent_host and args.parent_port:
-    coordinatorCmd += (' --parent-host ' + args.parent_host +
+    coordinatorCmdStr += (' --parent-host ' + args.parent_host +
                        ' --parent-port ' + args.parent_port)
 
-coordinator = runCmd(coordinatorCmd)
+coordinator = runCmd(coordinatorCmdStr)
 
 #send a command to the coordinator process
 def coordinatorCmd(cmd):
@@ -496,7 +496,7 @@ def runTestRaw(name, numProcs, cmds):
       coordinatorCmd('q')
       os.system("kill -9 %d" % coordinator.pid)
       print "Trying to kill old coordinator, and run new one on same port"
-      coordinator = runCmd(coordinatorCmd)
+      coordinator = runCmd(coordinatorCmdStr)
     for x in procs:
       #cleanup proc
       try:
