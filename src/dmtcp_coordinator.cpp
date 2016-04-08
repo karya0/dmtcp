@@ -1461,7 +1461,7 @@ void DmtcpCoordinator::registerData(const DmtcpMessage &hello_remote,
                                     const void *extraData)
 {
   if (parentSock == NULL) {
-    lookupService.registerData(hello_remote, (const void*) extraData);
+    lookupService.registerData(hello_remote, extraData);
   } else {
     DmtcpMessage msg = hello_remote;
     msg.from = UniquePid::ThisProcess();
