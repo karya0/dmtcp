@@ -268,14 +268,17 @@ void ConnectionRewirer::registerNSData(const char *nsid,
                                        socklen_t addrLen,
                                        ConnectionListT *conList)
 {
-  iterator i;
+  if (addr == NULL || addrLen == 0) {
+    return;
+  }
+
   JASSERT(theRewirer != NULL);
   size_t keyLen = sizeof(ConnectionIdentifier);
   size_t valLen = addrLen;
   char *buf = (char*) JALLOC_MALLOC(conList->size() * (keyLen + valLen));
   char *ptr = buf;
 
-  for (i = conList->begin(); i != conList->end(); ++i) {
+  for (iterator i = conList->begin(); i != conList->end(); ++i) {
     const ConnectionIdentifier& id = i->first;
     memcpy(ptr, &id, sizeof(id));
     memcpy(&ptr[sizeof(id)], addr, addrLen);
