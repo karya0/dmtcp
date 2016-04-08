@@ -76,22 +76,10 @@ void LookupService::query(string id,
   memcpy(*val, v->data(), *valLen);
 }
 
-void LookupService::registerData(const DmtcpMessage& msg,
-                                        const void *data)
+void LookupService::registerData(const DmtcpMessage& msg, const void *data)
 {
-  JASSERT (msg.keyLen > 0 && msg.valLen > 0 &&
-           msg.keyLen + msg.valLen == msg.extraBytes)
-    (msg.keyLen) (msg.valLen) (msg.extraBytes);
-  const void *key = data;
-  const void *val = (char *)key + msg.keyLen;
-  size_t keyLen = msg.keyLen;
-  size_t valLen = msg.valLen;
-  addKeyValue(msg.nsid, key, keyLen, val, valLen);
-}
-
-void LookupService::registerDataMulti(const DmtcpMessage& msg,
-                                      const void *data)
-{
+  JASSERT(msg.keyLen > 0) (msg.keyLen);
+  JASSERT(msg.valLen > 0) (msg.valLen);
   JASSERT(msg.extraBytes == msg.numKeys * (msg.keyLen + msg.valLen))
     (msg.numKeys) (msg.keyLen) (msg.valLen) (msg.extraBytes);
 

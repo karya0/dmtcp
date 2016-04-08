@@ -121,8 +121,7 @@ namespace dmtcp
       void ackSuspendMsg();
 
       void registerData(const DmtcpMessage &hello_remote,
-                        const void *extraData,
-                        jalib::JSocket remote = -1);
+                        const void *extraData);
 
       void respondToQuery(const DmtcpMessage &hello_remote,
                           const void *extraData,

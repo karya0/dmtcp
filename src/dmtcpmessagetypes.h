@@ -66,7 +66,6 @@ namespace dmtcp
     DMT_KILL_PEER,           // send kill message to peer
 
     DMT_REGISTER_NAME_SERVICE_DATA,
-    DMT_REGISTER_NAME_SERVICE_DATA_MULTI,
     DMT_NAME_SERVICE_QUERY,
     DMT_NAME_SERVICE_QUERY_RESPONSE,
 

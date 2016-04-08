@@ -630,13 +630,6 @@ void DmtcpCoordinator::onData(CoordClient *client)
     }
     break;
 
-    case DMT_REGISTER_NAME_SERVICE_DATA_MULTI:
-    {
-      JTRACE ("received REGISTER_NAME_SERVICE_DATA msg") (client->identity());
-      registerData(msg, (const void*) extraData);
-    }
-    break;
-
     case DMT_NAME_SERVICE_QUERY:
     {
       JTRACE ("received NAME_SERVICE_QUERY msg") (client->identity());
@@ -1465,29 +1458,15 @@ void DmtcpCoordinator::ackSuspendMsg()
 }
 
 void DmtcpCoordinator::registerData(const DmtcpMessage &hello_remote,
-                                    const void *extraData,
-                                    jalib::JSocket remote)
+                                    const void *extraData)
 {
   if (parentSock == NULL) {
-    lookupService.registerData(hello_remote, (const void*) extraData);
+    lookupService.registerData(hello_remote, extraData);
   } else {
     DmtcpMessage msg = hello_remote;
     msg.from = UniquePid::ThisProcess();
     *(parentSock) << msg;
     parentSock->writeAll((const char*) extraData, msg.extraBytes);
-
-    // If client asked for synchronous registry, do that.
-    if (remote.isValid()) {
-      JTRACE("Waiting for NS response from parent coordinator...");
-      msg.poison();
-      *(parentSock) >> msg;
-      msg.assertValid();
-      JASSERT(msg.type == DMT_REGISTER_NAME_SERVICE_DATA_SYNC_RESPONSE);
-
-      DmtcpMessage response(DMT_REGISTER_NAME_SERVICE_DATA_SYNC_RESPONSE);
-      JTRACE("Sending NS response to the client...");
-      remote << response;
-    }
   }
 }
 

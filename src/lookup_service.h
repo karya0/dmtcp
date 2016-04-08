@@ -70,7 +70,6 @@ namespace dmtcp
       ~LookupService() { reset(); }
       void reset();
       void registerData(const DmtcpMessage& msg, const void *data);
-      void registerDataMulti(const DmtcpMessage& msg, const void *data);
       void respondToQuery(jalib::JSocket& remote,
                           const DmtcpMessage& msg, const void *data);
 

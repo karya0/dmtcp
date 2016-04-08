@@ -642,21 +642,10 @@ int CoordinatorAPI::sendKeyValPairToCoordinator(const char *id,
   DmtcpMessage msg (DMT_REGISTER_NAME_SERVICE_DATA);
   JWARNING(strlen(id) < sizeof(msg.nsid));
   strncpy(msg.nsid, id, 8);
+  msg.numKeys = 1;
   msg.keyLen = key_len;
   msg.valLen = val_len;
   msg.extraBytes = key_len + val_len;
-  int sock = _coordinatorSocket;
-  if (dmtcp_is_running_state()) {
-    if (_nsSock == -1) {
-      _nsSock = createNewSocketToCoordinator(COORD_ANY);
-      JASSERT(_nsSock != -1);
-      _nsSock = Util::changeFd(_nsSock, PROTECTED_NS_FD);
-      sock = _nsSock;
-      DmtcpMessage m(DMT_NAME_SERVICE_WORKER);
-      JASSERT(Util::writeAll(sock, &m, sizeof(m)) == sizeof(m));
-    }
-    sock = _nsSock;
-  }
 
   JASSERT(Util::writeAll(sock, &msg, sizeof(msg)) == sizeof(msg));
   JASSERT(Util::writeAll(sock, key, key_len) == key_len);
@@ -672,7 +661,24 @@ int CoordinatorAPI::sendKeyValPairsToCoordinator(const char *id,
                                                  size_t count,
                                                  const void *data)
 {
-  DmtcpMessage msg (DMT_REGISTER_NAME_SERVICE_DATA_MULTI);
+  if (id == NULL || keyLen == 0 || valLen == 0 || count == 0 || data == NULL) {
+    return 0;
+  }
+
+  int sock = _coordinatorSocket;
+  if (dmtcp_is_running_state()) {
+    if (_nsSock == -1) {
+      _nsSock = createNewSocketToCoordinator(COORD_ANY);
+      JASSERT(_nsSock != -1);
+      _nsSock = Util::changeFd(_nsSock, PROTECTED_NS_FD);
+      sock = _nsSock;
+      DmtcpMessage m(DMT_NAME_SERVICE_WORKER);
+      JASSERT(Util::writeAll(sock, &m, sizeof(m)) == sizeof(m));
+    }
+    sock = _nsSock;
+  }
+
+  DmtcpMessage msg (DMT_REGISTER_NAME_SERVICE_DATA);
 
   JWARNING(strlen(id) < sizeof(msg.nsid));
   strncpy(msg.nsid, id, 8);
@@ -682,11 +688,8 @@ int CoordinatorAPI::sendKeyValPairsToCoordinator(const char *id,
   msg.valLen = valLen;
   msg.extraBytes = count * (keyLen + valLen);
 
-  JASSERT (!dmtcp_is_running_state());
-
-  JASSERT(Util::writeAll(_coordinatorSocket, &msg, sizeof(msg)) == sizeof(msg));
-  JASSERT(Util::writeAll(_coordinatorSocket, data, msg.extraBytes) ==
-          msg.extraBytes);
+  JASSERT(Util::writeAll(sock, &msg, sizeof(msg)) == sizeof(msg));
+  JASSERT(Util::writeAll(sock, data, msg.extraBytes) == msg.extraBytes);
 
   return 1;
 }

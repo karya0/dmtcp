@@ -450,12 +450,16 @@ EXTERNC int dmtcp_send_key_val_pairs_to_coordinator(const char *id,
 
 EXTERNC int dmtcp_send_key_val_pair_to_coordinator(const char *id,
                                                    const void *key,
-                                                   uint32_t key_len,
+                                                   uint32_t keyLen,
                                                    const void *val,
-                                                   uint32_t val_len)
+                                                   uint32_t valLen)
 {
-  return CoordinatorAPI::instance().sendKeyValPairToCoordinator(id, key, key_len,
-                                                                val, val_len);
+  JASSERT(keyLen > 0) (keyLen);
+  JASSERT(valLen > 0) (valLen);
+  char buf[keyLen + valLen];
+  memcpy(buf, key, keyLen);
+  memcpy(&buf[keyLen], val, valLen);
+  return dmtcp_send_key_val_pairs_to_coordinator(id, keyLen, valLen, 1, buf);
 }
 
 // On input, val points to a buffer in user memory and *val_len is the maximum
