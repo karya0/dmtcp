@@ -538,6 +538,24 @@ void DmtcpCoordinator::recordCkptFilename(CoordClient *client,
     JNOTE("Checkpoint complete. Wrote restart script") (restartScriptPath);
 
     JTIMER_STOP(checkpoint);
+
+    if (parentSock != NULL) {
+      // Tell coordinator to record our filename in the restart script
+      string hostname = jalib::Filesystem::GetCurrentHostname();
+      string ckptFilename = "test";
+      JTRACE("recording filenames") (ckptFilename) (hostname);
+      DmtcpMessage msg (msg.type = DMT_CKPT_FILENAME);
+
+      size_t buflen = hostname.length() + ckptFilename.length() + 2;
+      char buf[buflen];
+      strcpy(buf, ckptFilename.c_str());
+      strcpy(&buf[ckptFilename.length() + 1], hostname.c_str());
+      msg.extraBytes = buflen;
+
+      (*parentSock) << msg;
+      parentSock->writeAll(buf, buflen);
+    }
+
     resetCkptTimer();
 
     if (blockUntilDone) {
