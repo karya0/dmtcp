@@ -544,6 +544,7 @@ void DmtcpCoordinator::recordCkptFilename(CoordClient *client,
       string hostname = jalib::Filesystem::GetCurrentHostname();
       string ckptFilename = "test";
       JTRACE("recording filenames") (ckptFilename) (hostname);
+      WorkerState::setCurrentState(WorkerState::CHECKPOINTED);
       DmtcpMessage msg (msg.type = DMT_CKPT_FILENAME);
 
       size_t buflen = hostname.length() + ckptFilename.length() + 2;
