@@ -65,8 +65,7 @@ static Thread *ckptThread = NULL;
 static int numUserThreads = 0;
 static bool originalstartup;
 
-extern bool sem_launch_first_time;
-extern sem_t sem_launch; // allocated in coordinatorapi.cpp
+static sem_t sem_start;
 static sem_t semNotifyCkptThread;
 static sem_t semWaitForCkptThreadSignal;
 
@@ -166,7 +165,7 @@ void ThreadList::init()
   motherofall_tlsInfo = &motherofall->tlsInfo;
   updateTid(motherofall);
 
-  sem_init(&sem_launch, 0, 0);
+  sem_init(&sem_start, 0, 0);
   sem_init(&semNotifyCkptThread, 0, 0);
   sem_init(&semWaitForCkptThreadSignal, 0, 0);
 
@@ -181,9 +180,9 @@ void ThreadList::init()
    * don't run the checkpoint thread and user thread at the same time.
    */
   errno = 0;
-  while (-1 == sem_wait(&sem_launch) && errno == EINTR)
+  while (-1 == sem_wait(&sem_start) && errno == EINTR)
     errno = 0;
-  sem_destroy(&sem_launch);
+  sem_destroy(&sem_start);
 }
 
 /*****************************************************************************
@@ -323,11 +322,6 @@ static void *checkpointhread (void *dummy)
 
   ckptThread = curThread;
   ckptThread->state = ST_CKPNTHREAD;
-  // Important:  we set this in the ckpt thread to avoid a race,
-  //     since: (i) the ckpt thread must read this; and (ii) if we had
-  //     set it earlier, it could be invoked and modified earlier
-  //     inside a generic command like CoordinatorAPI::recvMsgFromCoordi).
-  sem_launch_first_time = true;
 
   /* For checkpoint thread, we want to block delivery of all but some special
    * signals
@@ -356,6 +350,9 @@ static void *checkpointhread (void *dummy)
 
   Thread_SaveSigState(ckptThread);
   TLSInfo_SaveTLSState(&ckptThread->tlsInfo);
+
+  /* Release user thread after we've initialized. */
+  sem_post(&sem_start);
 
   /* Set up our restart point.  I.e., we get jumped to here after a restore. */
 #ifdef SETJMP
