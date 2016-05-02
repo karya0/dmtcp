@@ -253,11 +253,15 @@ static jalib::JBuffer buf(0); // To force linkage of jbuffer.cpp
 
 //called before user main()
 //workerhijack.cpp initializes a static variable theInstance to DmtcpWorker obj
-DmtcpWorker::DmtcpWorker()
+extern "C" void dmtcp_initialize()
 {
+  static bool initialized = false;
+  if (initialized) {
+    return;
+  }
+  dmtcp_prepare_wrappers();
   WorkerState::setCurrentState(WorkerState::UNKNOWN);
 
-  dmtcp_prepare_wrappers();
   initializeJalib();
   dmtcp_prepare_atfork();
   PluginManager::initialize();
@@ -273,7 +277,7 @@ DmtcpWorker::DmtcpWorker()
 
   //This is called for side effect only.  Force this function to call
   // getenv(ENV_VAR_SIGCKPT) now and cache it to avoid getenv calls later.
-  determineCkptSignal();
+  DmtcpWorker::determineCkptSignal();
 
   // Also cache programName and arguments
   string programName = jalib::Filesystem::GetProgramName();
@@ -302,6 +306,14 @@ DmtcpWorker::DmtcpWorker()
 
   ThreadSync::initMotherOfAll();
   ThreadList::init();
+  initialized = true;
+}
+
+//called before user main()
+//workerhijack.cpp initializes a static variable theInstance to DmtcpWorker obj
+DmtcpWorker::DmtcpWorker()
+{
+  dmtcp_initialize();
 }
 
 void DmtcpWorker::resetOnFork()
