@@ -754,7 +754,7 @@ void CoordinatorAPI::waitForCheckpointCommand()
     FD_ZERO(&rfds);
     FD_SET(_coordinatorSocket, &rfds );
     int retval =
-      select(_coordinatorSocket + 1, &rfds, NULL, NULL, timeout);
+      _real_select(_coordinatorSocket + 1, &rfds, NULL, NULL, timeout);
     if (retval == 0) { // timeout expired, time for checkpoint
       JTRACE("Timeout expired, checkpointing now.");
       return;
