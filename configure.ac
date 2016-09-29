@@ -570,4 +570,23 @@ if test "$gccAtomicBuiltins" = "yes"; then
 fi
 dnl Else will use mutex implementation; see jalib/jalloc.cpp
 
+dnl Check whether __WAIT_STATUS is available.
+AC_MSG_CHECKING(for __WAIT_STATUS type)
+AC_LINK_IFELSE(
+[
+  AC_LANG_SOURCE([[
+    #defind <sys/wait.h>
+    int main() {
+      __WAIT_STATUS status;
+      return 0;
+    }
+  ]])
+], [wait_status='yes'], [wait_status='no'])
+AC_MSG_RESULT([$wait_status])
+
+if test "$wait_status" = "no"; then
+  AC_DEFINE([__WAIT_STATUS],[int *],
+            [can use __WAIT_STATUS as wait status type])
+fi
+
 AC_OUTPUT
