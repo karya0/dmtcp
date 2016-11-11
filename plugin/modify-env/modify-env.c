@@ -4,21 +4,21 @@
  * (Reads dmtcp_env.txt from local directory.)
  */
 
-#include <ctype.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #ifndef STANDALONE
-# include "dmtcp.h"
-# include "config.h"
+#include "config.h"
+#include "dmtcp.h"
 #endif
 
 #define DMTCP_ENV_VAR "DMTCP_ENV_FILE"
@@ -32,24 +32,31 @@
  * FOO="a b c"  # value of var (in quotes) will include spaces
  */
 
-char * read_dmtcp_env_file(char *file, int size);
+char *read_dmtcp_env_file(char *file, int size);
 int readAndSetEnv(char *buf, int size);
 int readall(int fd, char *buf, int maxCount);
 extern void warning(const char *warning_part1, const char *warning_part2);
 
-EXTERNC int dmtcp_modify_env_enabled() { return 1; }
+EXTERNC int
+dmtcp_modify_env_enabled()
+{
+  return 1;
+}
 
 #ifdef STANDALONE
-int dmtcp_get_restart_env(char *envName, char *dest, size_t size) {
+int
+dmtcp_get_restart_env(char *envName, char *dest, size_t size)
+{
   if (getenv(envName))
     strncpy(dest, getenv(envName), size);
-  return ( getenv(envName) ? 0 : -1 );
+  return (getenv(envName) ? 0 : -1);
 }
 #endif
 
 #ifndef STANDALONE
 
-static void restart()
+static void
+restart()
 {
   char env_file[PATH_MAX];
   int retval = dmtcp_get_restart_env(DMTCP_ENV_VAR, env_file, PATH_MAX);
@@ -68,17 +75,15 @@ static void restart()
     if (!getenv("DMTCP_QUIET") &&
         strcmp(getenv("DMTCP_QUIET")[0], "0") != 0) {
 #endif
-      warning("modify-env plugin: Couldn't open ",
-              "\"dmtcp_env.txt\"\n");
+    warning("modify-env plugin: Couldn't open ", "\"dmtcp_env.txt\"\n");
 #if 0
     }
 #endif
   }
 }
 
-static DmtcpBarrier modify_env_barriers[] = {
-  {DMTCP_GLOBAL_BARRIER_RESTART, restart, "restart"}
-};
+static DmtcpBarrier modify_env_barriers[] = { { DMTCP_GLOBAL_BARRIER_RESTART,
+                                                restart, "restart" } };
 
 DmtcpPluginDescriptor_t modify_env_plugin = {
   DMTCP_PLUGIN_API_VERSION,
@@ -96,7 +101,9 @@ DMTCP_DECL_PLUGIN(modify_env_plugin);
 
 #define readEOF ((char)-1)
 
-char * read_dmtcp_env_file(char *file, int size) {
+char *
+read_dmtcp_env_file(char *file, int size)
+{
   // FIXME: WHAT DOES THIS DO?
   // We avoid using malloc.
   char *buf = mmap(NULL, size, PROT_READ | PROT_WRITE,
@@ -113,9 +120,9 @@ char * read_dmtcp_env_file(char *file, int size) {
   }
 #else
   char pathname[512];
-  if (strlen(dmtcp_get_ckpt_dir()) > sizeof(pathname)-1-sizeof(file)) {
+  if (strlen(dmtcp_get_ckpt_dir()) > sizeof(pathname) - 1 - sizeof(file)) {
     warning(__FILE__ ": Pathname of ckpt dir is too long: ",
-            dmtcp_get_ckpt_dir() /* , "\n" */ );
+            dmtcp_get_ckpt_dir() /* , "\n" */);
     exit(1);
   }
   strcpy(pathname, dmtcp_get_ckpt_dir());
@@ -131,16 +138,18 @@ char * read_dmtcp_env_file(char *file, int size) {
     warning("read: ", strerror(errno));
     exit(1);
   }
-  *(buf+count) = readEOF;
+  *(buf + count) = readEOF;
   close(fd);
   return buf;
 }
 
 
-int readAndSetEnv(char *buf, int size) {
+int
+readAndSetEnv(char *buf, int size)
+{
   // We call read() on env.txt in dir of getCkptDir() until readEOF==(char)-1
   char *c = buf;
-  char nameBuf[1000] = {'\0'};
+  char nameBuf[1000] = { '\0' };
   char valueBuf[1000];
   char nameChanged[10000];
   char *dest = nameBuf;
@@ -164,7 +173,7 @@ int readAndSetEnv(char *buf, int size) {
         c++;
         // Put nameBuf and value into environment
         if (dest > nameBuf && dest < nameBuf + sizeof(nameBuf))
-          unsetenv(nameBuf);  // No valueBuf means to unset that name
+          unsetenv(nameBuf); // No valueBuf means to unset that name
         else
           setenv(nameBuf, valueBuf, 1); // 1 = overwrite
         // Record that this name changed, in case user does $expansion on it
@@ -204,7 +213,8 @@ int readAndSetEnv(char *buf, int size) {
         break;
       case '$': // Expand variable in current environment
         // Env name after '$' may consist only of alphanumeric char's and '_'
-        { char envName[1000];
+        {
+          char envName[1000];
           char *d = envName;
           c++;
           while (isalnum(*c) || *c == '_')
@@ -224,10 +234,10 @@ int readAndSetEnv(char *buf, int size) {
             strcpy(dest, getenv(envName));
           } else {
             rc = dmtcp_get_restart_env(envName, dest,
-                                         sizeof(valueBuf) - (dest - valueBuf));
+                                       sizeof(valueBuf) - (dest - valueBuf));
           }
           if (rc == 0)
-            dest += strlen(dest);  // Move dest ptr to end of expanded string
+            dest += strlen(dest); // Move dest ptr to end of expanded string
         }
         break;
       default:
@@ -237,22 +247,29 @@ int readAndSetEnv(char *buf, int size) {
   }
 }
 
-int readall(int fd, char *buf, int maxCount) {
+int
+readall(int fd, char *buf, int maxCount)
+{
   int count = 0;
   while (1) {
     if (count + 100 > maxCount) {
       warning("", "Environment file is too large.\n");
       return -1;
     }
-    int numRead = read(fd, buf+count, 100); // read up to 100 char's at once
-    if (numRead == 0) return count; // Reading 0 means EOF
-    if (numRead > 0) count += numRead;
-    if (numRead < 0 && errno != EAGAIN && errno != EINVAL) return -1; // error
+    int numRead = read(fd, buf + count, 100); // read up to 100 char's at once
+    if (numRead == 0)
+      return count; // Reading 0 means EOF
+    if (numRead > 0)
+      count += numRead;
+    if (numRead < 0 && errno != EAGAIN && errno != EINVAL)
+      return -1; // error
   }
 }
 
 #ifdef STANDALONE
-int main() {
+int
+main()
+{
   int size = 4096;
   printf("HOME: %s, DISPLAY: %s, FOO: %s, HOST: %s, EDITOR: %s, USER: %s\n",
          getenv("HOME"), getenv("DISPLAY"), getenv("FOO"), getenv("HOST"),
