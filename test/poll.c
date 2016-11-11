@@ -1,13 +1,15 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
-#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-int main() {
+int
+main()
+{
   int pipefd[2];
   if (pipe(pipefd) == -1) {
     perror("pipe");

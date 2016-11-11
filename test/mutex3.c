@@ -1,8 +1,8 @@
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "dmtcp.h"
 
 // This code uses dmtcp_mutex_trylock() and dmtcp_mutex_unlock().
@@ -13,7 +13,9 @@
 //   since na error-checking must check the owner when unlocking.
 //   (In contrsst, a recursive mutex will check the owner when locking.)
 
-int main() {
+int
+main()
+{
   // DMTCP and native differ when this is not initialized.  Why?
   // DMTCP crashed on lock with ESRCH
   int counter = 0;
@@ -29,19 +31,18 @@ int main() {
     int rc;
     rc = pthread_mutex_trylock(&mutex);
     if (rc != 0) {
-      printf("pthread_mutex_trylock (error-checking): %s\n\n",
-             strerror(rc));
+      printf("pthread_mutex_trylock (error-checking): %s\n\n", strerror(rc));
       exit(1);
     }
     dmtcp_enable_ckpt();
     if (counter++ % 1000000 == 0) {
-      printf("b"); fflush(stdout);
+      printf("b");
+      fflush(stdout);
     }
     dmtcp_disable_ckpt();
     rc = pthread_mutex_unlock(&mutex);
     if (rc != 0) {
-      printf("pthread_mutex_unlock (error-checking): %s\n\n",
-             strerror(rc));
+      printf("pthread_mutex_unlock (error-checking): %s\n\n", strerror(rc));
       exit(1);
     }
   }

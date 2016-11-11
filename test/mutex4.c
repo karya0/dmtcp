@@ -1,9 +1,9 @@
-#include <unistd.h>
-#include <stdlib.h>
+#include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <pthread.h>
+#include <unistd.h>
 #include "dmtcp.h"
 
 // This code uses the attribute PTHREAD_MUTEX_ERRORCHECK.
@@ -14,7 +14,9 @@
 pthread_mutex_t mutex;
 void *mutex_loop(void *arg);
 
-int main() {
+int
+main()
+{
   pthread_mutexattr_t attr;
   pthread_mutexattr_init(&attr);
   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
@@ -29,7 +31,9 @@ int main() {
   return 0;
 }
 
-void *mutex_loop(void *arg /* NOTUSED */) {
+void *
+mutex_loop(void *arg /* NOTUSED */)
+{
   int counter = 0;
 
   struct timespec hundredth_second;
@@ -40,19 +44,18 @@ void *mutex_loop(void *arg /* NOTUSED */) {
     int rc;
     rc = pthread_mutex_lock(&mutex);
     if (rc != 0) {
-      printf("pthread_mutex_lock (error-checking): %s\n\n",
-             strerror(rc));
+      printf("pthread_mutex_lock (error-checking): %s\n\n", strerror(rc));
       exit(1);
     }
     // Wait a little to optimize chances of checkpoint occurring here.
     nanosleep(&hundredth_second, NULL);
     if (counter++ % 50 == 0) {
-      printf("b"); fflush(stdout);
+      printf("b");
+      fflush(stdout);
     }
     rc = pthread_mutex_unlock(&mutex);
     if (rc != 0) {
-      printf("pthread_mutex_unlock (error-checking): %s\n\n",
-             strerror(rc));
+      printf("pthread_mutex_unlock (error-checking): %s\n\n", strerror(rc));
       exit(1);
     }
   }

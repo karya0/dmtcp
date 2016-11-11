@@ -1,14 +1,14 @@
 #define _GNU_SOURCE
-#include <sched.h>
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include <string.h>
 #include <assert.h>
+#include <errno.h>
+#include <sched.h>
 #include <signal.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 int
 main()
@@ -37,7 +37,7 @@ main()
       printf("Trying to set CPU affinity for (%d) to (%d)\n", ret, i);
       if (sched_setaffinity(ret, sizeof(cset), &cset) < 0) {
         perror("Error setting CPU affinity for child");
-        //return -1;  Turning this off for Travis containers
+        // return -1;  Turning this off for Travis containers
       } else {
         printf("CPU affinity for (%d) set to (%d)\n", ret, i);
       }
@@ -47,9 +47,9 @@ main()
       printf("Trying to read CPU affinity for (%d)\n", ret);
       if (sched_getaffinity(ret, sizeof(cset), &cset) < 0) {
         perror("Error getting CPU affinity for child");
-        //return -1;
+        // return -1;
       } else {
-        //assert(CPU_ISSET(i, &cset));
+        // assert(CPU_ISSET(i, &cset));
         printf("CPU affinity for (%d) is (%d)\n", ret, i);
       }
       sleep(1);

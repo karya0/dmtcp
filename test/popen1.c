@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int main(int argc, char* argv[])
+int
+main(int argc, char *argv[])
 {
   FILE *fr;
   FILE *fw;
   int ch;
 
-  while (1)
-  {
+  while (1) {
     fr = popen("ls *", "r");
     if (fr == NULL) {
       perror("popen");

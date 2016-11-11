@@ -1,25 +1,25 @@
-#include <sys/types.h>
-#include <mqueue.h>
-#include <errno.h>
 #include <assert.h>
-#include <unistd.h>
-#include <string.h>
+#include <errno.h>
+#include <mqueue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 struct msgbuf {
   mqd_t mqdes;
-  int   expected;
+  int expected;
 };
 
 void msg_snd(mqd_t mqdes, int i);
 void msg_rcv(mqd_t mqdes, int i);
 static int msg_notify(mqd_t mqdes, int i);
 
-static void                     /* Thread start function */
-tfunc(union sigval sv)
+static void /* Thread start function */
+  tfunc(union sigval sv)
 {
-  struct msgbuf *m = (struct msgbuf *) sv.sival_ptr;
+  struct msgbuf *m = (struct msgbuf *)sv.sival_ptr;
 
   msg_rcv(m->mqdes, m->expected);
 
@@ -28,7 +28,8 @@ tfunc(union sigval sv)
   return;
 }
 
-void msg_snd(mqd_t mqdes, int i)
+void
+msg_snd(mqd_t mqdes, int i)
 {
   char buf[16];
   sprintf(buf, "%d", i);
@@ -42,7 +43,8 @@ void msg_snd(mqd_t mqdes, int i)
   }
 }
 
-void msg_rcv(mqd_t mqdes, int i)
+void
+msg_rcv(mqd_t mqdes, int i)
 {
   struct mq_attr attr;
 
@@ -67,7 +69,8 @@ void msg_rcv(mqd_t mqdes, int i)
   free(buf);
 }
 
-static int msg_notify(mqd_t mqdes, int i)
+static int
+msg_notify(mqd_t mqdes, int i)
 {
   struct msgbuf *m = malloc(sizeof(struct msgbuf));
   m->mqdes = mqdes;
@@ -76,11 +79,12 @@ static int msg_notify(mqd_t mqdes, int i)
   sev.sigev_notify = SIGEV_THREAD;
   sev.sigev_notify_function = tfunc;
   sev.sigev_notify_attributes = NULL;
-  sev.sigev_value.sival_ptr = m;   /* Arg. to thread func. */
+  sev.sigev_value.sival_ptr = m; /* Arg. to thread func. */
   return mq_notify(mqdes, &sev);
 }
 
-void parent(const char *mqname, const char *mqname2)
+void
+parent(const char *mqname, const char *mqname2)
 {
   mqd_t mqdes = mq_open(mqname, O_RDWR | O_CREAT, 0666, 0);
   // Unfortunately, DMTCP doesn't yet support unlinking while others use it:
@@ -106,7 +110,7 @@ void parent(const char *mqname, const char *mqname2)
       // It's possible for parent to iterate twice before child receives.
       // Keep trying.  We need a notify after each successful receive.
       sleep(1);
-      rc = msg_notify(mqdes2, i+1);
+      rc = msg_notify(mqdes2, i + 1);
       // printf("Was notified: rc, errno: %d %d\n", rc, errno);
     } while ((rc == -1) && (errno == EBUSY));
     if (rc == -1) {
@@ -122,7 +126,8 @@ void parent(const char *mqname, const char *mqname2)
   exit(0);
 }
 
-void child(const char *mqname, const char *mqname2)
+void
+child(const char *mqname, const char *mqname2)
 {
   mqd_t mqdes = mq_open(mqname, O_RDWR | O_CREAT, 0666, 0);
   // Unfortunately, DMTCP doesn't yet support unlinking while others use it:
@@ -138,7 +143,7 @@ void child(const char *mqname, const char *mqname2)
     exit(1);
   }
 
-  int i=1;
+  int i = 1;
   while (1) {
     msg_rcv(mqdes, i);
     printf("Client: received %d, sending %d\n", i, i + 1);
@@ -149,7 +154,8 @@ void child(const char *mqname, const char *mqname2)
   exit(0);
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
   char mqname[256];
   char mqname2[256];

@@ -2,20 +2,21 @@
 
 // posix_openpt() needs _XOPEN_SOURCE set to 600
 #define _XOPEN_SOURCE 600
-// Using _XOPEN_SOURCE to ensure ptsname returns 'char *' (recommended by Open Group)
+// Using _XOPEN_SOURCE to ensure ptsname returns 'char *' (recommended by Open
+// Group)
 #define _DEFAULT_SOURCE
 // _DEFAULT_SOURCE used to expose sys_errlist[]
-#include <stdio.h>
-#include <pty.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
 #include <errno.h>
-#include <termios.h>
-#include <sys/wait.h>
-#include <sys/types.h>
+#include <fcntl.h>
+#include <pty.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <termios.h>
+#include <unistd.h>
 
 // Define DEBUG when running manually, to see what part of terminal
 // was not restored properly:
@@ -23,17 +24,20 @@
 
 #ifdef DEBUG
 // printing to stdout won't work, when it goes to /dev/pts/XX
-# define PERROR(str) fprintf(fdopen(orig_stdout, "w"), \
-			     #str ": %s\n", sys_errlist[errno])
-# else
-# define PERROR(str)
+#define PERROR(str) \
+  fprintf(fdopen(orig_stdout, "w"), #str ": %s\n", sys_errlist[errno])
+#else
+#define PERROR(str)
 #endif
 
 int setupslave(char *slavedevice, int orig_stdout);
-int testslave(char *slavedevice, struct termios * orig_termios_p,
+int testslave(char *slavedevice,
+              struct termios *orig_termios_p,
               int orig_stdout);
 
-int main() {
+int
+main()
+{
   int masterfd, slavefd, pid;
   char *slavedevice;
 #ifdef DEBUG
@@ -42,16 +46,14 @@ int main() {
   int orig_stdout = -1;
 #endif
 
-  masterfd = posix_openpt(O_RDWR|O_NOCTTY);
-  if (masterfd == -1
-      || grantpt(masterfd) == -1
-      || unlockpt(masterfd) == -1
-      || (slavedevice = ptsname(masterfd)) == NULL)
+  masterfd = posix_openpt(O_RDWR | O_NOCTTY);
+  if (masterfd == -1 || grantpt(masterfd) == -1 || unlockpt(masterfd) == -1 ||
+      (slavedevice = ptsname(masterfd)) == NULL)
     return 1;
 
   // Calling ptsname only once.  So, it's safe to continue using slavedevice.
   printf("slave device is: %s\n", slavedevice);
-  slavefd = open(slavedevice, O_RDWR|O_NOCTTY);
+  slavefd = open(slavedevice, O_RDWR | O_NOCTTY);
   if (slavefd < 0)
     return 2;
   close(slavefd);
@@ -70,13 +72,14 @@ int main() {
           return 0;
       }
     }
-  } else
-    if (waitpid(pid, NULL, 0) == -1)
-      PERROR("waitpid");
+  } else if (waitpid(pid, NULL, 0) == -1)
+    PERROR("waitpid");
   return 0; /* Never returns */
 }
 
-int setupslave(char *slavedevice, int orig_stdout) {
+int
+setupslave(char *slavedevice, int orig_stdout)
+{
   int fd;
   alarm(150); /* For safety; will not die when controlling terminal removed. */
   /* We are neither a session leader nor process group leader.
@@ -97,28 +100,33 @@ int setupslave(char *slavedevice, int orig_stdout) {
   close(2);
   fd = open(slavedevice, O_RDWR); /* Gains new controlling terminal */
   /* Alternative way to set controlling terminal:  ioctl(fd, TIOCSCTTY) */
-  if (dup(fd) == -1) return 1;
-  if (dup(fd) == -1) return 1;
+  if (dup(fd) == -1)
+    return 1;
+  if (dup(fd) == -1)
+    return 1;
   return 0;
 }
 
-int testslave(char *slavedevice, struct termios * orig_termios_p,
-              int orig_stdout) {
+int
+testslave(char *slavedevice, struct termios *orig_termios_p, int orig_stdout)
+{
   struct termios curr_termios;
-  int fd = open(slavedevice, O_RDWR);; 
+  int fd = open(slavedevice, O_RDWR);
+  ;
   if (fd == -1)
     exit(1);
 
 #ifdef DEBUG
   FILE *stream = fdopen(orig_stdout, "w");
-  fprintf(stream, "pid: %d, ppid: %d, sid: %d, pgid: %d\n",
-	  getpid(), getppid(), getsid(getpid()), getpgid(getpid()));
-  fprintf(stream, "tcgetsid:  session id of %s is: %d\n",
-	  slavedevice, tcgetsid(fd));
-  if (tcgetattr(1, &curr_termios) == 0); /* fd 1 is now the slave terminal */
-    fprintf(stream, "c_iflag: %d, c_oflag: %d, c_cflag: %d, c_lflag: %d\n",
-            curr_termios.c_iflag, curr_termios.c_oflag,
-            curr_termios.c_cflag, curr_termios.c_lflag);
+  fprintf(stream, "pid: %d, ppid: %d, sid: %d, pgid: %d\n", getpid(), getppid(),
+          getsid(getpid()), getpgid(getpid()));
+  fprintf(stream, "tcgetsid:  session id of %s is: %d\n", slavedevice,
+          tcgetsid(fd));
+  if (tcgetattr(1, &curr_termios) == 0)
+    ; /* fd 1 is now the slave terminal */
+  fprintf(stream, "c_iflag: %d, c_oflag: %d, c_cflag: %d, c_lflag: %d\n",
+          curr_termios.c_iflag, curr_termios.c_oflag, curr_termios.c_cflag,
+          curr_termios.c_lflag);
   /* input, output, control, local modes */
   sleep(2);
 #else
@@ -128,10 +136,10 @@ int testslave(char *slavedevice, struct termios * orig_termios_p,
     exit(1);
   if (tcgetattr(1, &curr_termios) == -1) /* fd 1 is now the slave terminal */
     exit(1);
-  if (curr_termios.c_iflag != orig_termios_p->c_iflag
-      || curr_termios.c_oflag != orig_termios_p->c_oflag
-      || curr_termios.c_cflag != orig_termios_p->c_cflag
-      || curr_termios.c_lflag != orig_termios_p->c_lflag)
+  if (curr_termios.c_iflag != orig_termios_p->c_iflag ||
+      curr_termios.c_oflag != orig_termios_p->c_oflag ||
+      curr_termios.c_cflag != orig_termios_p->c_cflag ||
+      curr_termios.c_lflag != orig_termios_p->c_lflag)
     exit(1);
 #endif
   close(fd);

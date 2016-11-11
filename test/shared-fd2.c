@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include <string.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 // This example is related to a DMTCP bug found when MVAPICH is run
 //   directly under ibrun/mpirun_rsh (for example, at Stampede).
@@ -15,9 +15,11 @@
 //   on the local host (e.g., CHILD1).  Presumably, CHILD2 is created through
 //   fork and exec, and this is how the fd ends up being shared.
 
-enum proc {PARENT, CHILD1, CHILD2};
+enum proc { PARENT, CHILD1, CHILD2 };
 
-int main(int argc, char* argv[]) {
+int
+main(int argc, char *argv[])
+{
   enum proc thisProc;
   const char *me;
   int fd;
@@ -47,14 +49,14 @@ int main(int argc, char* argv[]) {
     }
 
     if (fork() == 0) { // exec to CHILD1
-      char *childArgv[] = {argv[0], child, "-fd", fd_str, NULL};
+      char *childArgv[] = { argv[0], child, "-fd", fd_str, NULL };
       sprintf(child, "%d", CHILD1);
       sprintf(fd_str, "%d", sockets[0]);
       execvp(argv[0], childArgv);
     }
 
     if (fork() == 0) { // exec to CHILD2
-      char *childArgv[] = {argv[0], child, "-fd", fd_str, NULL};
+      char *childArgv[] = { argv[0], child, "-fd", fd_str, NULL };
       sprintf(child, "%d", CHILD2);
       sprintf(fd_str, "%d", sockets[1]);
       execvp(argv[0], childArgv);
@@ -70,12 +72,14 @@ int main(int argc, char* argv[]) {
   if (thisProc == CHILD1) {
     while (1) {
       sprintf(buf, "%s(%d)", me, count++);
-      if (write(fd, buf, sizeof(buf)) != sizeof(buf)) break;
+      if (write(fd, buf, sizeof(buf)) != sizeof(buf))
+        break;
       sleep(2);
     }
   } else if (thisProc == CHILD2) {
     while (1) {
-      if (read(fd, buf, sizeof(buf)) != sizeof(buf)) break;
+      if (read(fd, buf, sizeof(buf)) != sizeof(buf))
+        break;
       printf("%s read: %s\n", me, buf);
     }
   }

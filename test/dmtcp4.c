@@ -3,18 +3,22 @@
 #define _GNU_SOURCE
 // sigaction() needs _XOPEN_SOURCE or _POSIX_SOURCE
 #define _XOPEN_SOURCE
-#include <stdio.h>
 #include <signal.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-void myGroovyHandler(int i){
+void
+myGroovyHandler(int i)
+{
   printf("yay signals!!!\n");
 }
 
-int main(int argc, char* argv[]){
+int
+main(int argc, char *argv[])
+{
   alarm(1);
-  while (1){
+  while (1) {
     signal(SIGUSR1, &myGroovyHandler);
     signal(SIGUSR2, &myGroovyHandler);
     signal(SIGALRM, &myGroovyHandler);
@@ -25,7 +29,7 @@ int main(int argc, char* argv[]){
     sigdelset(&set, SIGTERM);
     sigdelset(&set, SIGSTOP);
     sigdelset(&set, SIGSEGV);
-    sigdelset(&set, SIGINT);  // Let user and autotest.py kill it.
+    sigdelset(&set, SIGINT); // Let user and autotest.py kill it.
     sigprocmask(SIG_BLOCK, &set, NULL);
     pthread_sigmask(SIG_BLOCK, &set, NULL);
 

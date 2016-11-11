@@ -1,13 +1,15 @@
 /* Compile with:  gcc THIS_FILE -lpthread */
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <string.h>
 
-void *start_routine(void*);
+void *start_routine(void *);
 
-int main() {
+int
+main()
+{
   pthread_t thread;
   void *arg;
 
@@ -28,7 +30,9 @@ int main() {
   }
 }
 
-void *start_routine(void* arg) {
+void *
+start_routine(void *arg)
+{
   free(arg);
   void *valuePtr = malloc(20);
   pthread_exit(valuePtr);
