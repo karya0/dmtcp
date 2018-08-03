@@ -38,17 +38,17 @@ dmtcp_ptrace_enabled() { return 1; }
 void
 ptraceInit()
 {
-  PtraceInfo::instance().createSharedFile();
-  PtraceInfo::instance().mapSharedFile();
+  // PtraceInfo::instance().createSharedFile();
+  // PtraceInfo::instance().mapSharedFile();
 }
 
 void
 ptraceWaitForSuspendMsg(DmtcpEventData_t *data)
 {
-  PtraceInfo::instance().markAsCkptThread();
+  // PtraceInfo::instance().markAsCkptThread();
 
   if (!originalStartup) {
-    PtraceInfo::instance().waitForSuperiorAttach();
+  // PtraceInfo::instance().waitForSuperiorAttach();
   } else {
     originalStartup = 0;
   }
@@ -57,36 +57,77 @@ ptraceWaitForSuspendMsg(DmtcpEventData_t *data)
 void
 ptraceProcessResumeUserThread(DmtcpEventData_t *data)
 {
-  ptrace_process_resume_user_thread(data->resumeUserThreadInfo.isRestart);
+// ptrace_process_resume_user_thread(data->resumeUserThreadInfo.isRestart);
 }
 
-extern "C" void
-dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
+static void
+dmtcp_ptrace_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
 {
   switch (event) {
   case DMTCP_EVENT_INIT:
-    ptraceInit();
+    // ptraceInit();
+    printf("\n*** The init event has been called   ***\n");
     break;
 
   case DMTCP_EVENT_WAIT_FOR_CKPT:
-    ptraceWaitForSuspendMsg(data);
+    printf("\n*** The wait for checkpoint event has been called   ***\n");
+    // ptraceWaitForSuspendMsg(data);
     break;
 
   case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
-    ptrace_process_pre_suspend_user_thread();
+    printf("\n*** The event pre_suspend user thread has been called   ***\n");
+    // ptrace_process_pre_suspend_user_thread();
+
     break;
 
   case DMTCP_EVENT_RESUME_USER_THREAD:
-    ptraceProcessResumeUserThread(data);
+    printf("\n*** The event resume user thread has been called   ***\n");
+    // ptraceProcessResumeUserThread(data);
     break;
 
   case DMTCP_EVENT_ATFORK_CHILD:
     originalStartup = 1;
+      printf("\n*** The event atfork event has been called   ***\n");
     break;
 
   default:
     break;
   }
-
-  DMTCP_NEXT_EVENT_HOOK(event, data);
 }
+static void
+checkpoint()
+{
+  printf("\n*** The plugin is being called before checkpointing. ***\n");
+  // ptraceWaitForSuspendMsg(data);
+  printf("\n*** WaitForSuspend called. ***\n");
+}
+
+static void
+resume()
+{
+  printf("*** The application has now been checkpointed. ***\n");
+}
+
+static void
+restart()
+{
+  printf("The application is now restarting from a checkpoint.\n");
+}
+
+static DmtcpBarrier barriers[] = {
+        { DMTCP_GLOBAL_BARRIER_PRE_CKPT, checkpoint, "checkpoint" },
+        { DMTCP_GLOBAL_BARRIER_RESUME, resume, "resume" },
+        { DMTCP_GLOBAL_BARRIER_RESTART, restart, "restart" }
+};
+DmtcpPluginDescriptor_t ptrace_plugin = {
+        DMTCP_PLUGIN_API_VERSION,
+        DMTCP_PACKAGE_VERSION,
+        "ptrace",
+        "DMTCP",
+        "dmtcp@ccs.neu.edu",
+        "Ptrace plugin",
+        DMTCP_DECL_BARRIERS(barriers),
+        dmtcp_ptrace_event_hook
+};
+
+DMTCP_DECL_PLUGIN(ptrace_plugin);

@@ -55,7 +55,7 @@ if USE_TEST_SUITE == "no":
   sys.exit()
 
 # Disable ptrace tests for now.
-PTRACE_SUPPORT="no"
+PTRACE_SUPPORT="yes"
 
 signal.alarm(1800)  # half hour
 
@@ -1018,10 +1018,10 @@ if HAS_SCREEN == "yes" and SCREEN_TEST_WORKS:
 
 if PTRACE_SUPPORT == "yes" and ARM_HOST == "no" and \
    sys.version_info[0:2] >= (2,6):
-  if HAS_STRACE == "yes":
-    S=10*DEFAULT_S
-    runTest("strace",    2,  ["--ptrace strace test/dmtcp2"])
-    S=DEFAULT_S
+  #if HAS_STRACE == "yes":
+  #  S=10*DEFAULT_S
+  #  runTest("strace",    2,  ["--ptrace strace test/dmtcp2"])
+  #  S=DEFAULT_S
 
   if HAS_GDB == "yes":
     if uname_p[0:3] == 'arm':

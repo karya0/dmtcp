@@ -234,6 +234,10 @@ PluginManager::eventHook(DmtcpEvent_t event, DmtcpEventData_t *data)
     }
     break;
 
+  case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
+  case DMTCP_EVENT_RESUME_USER_THREAD:
+  case DMTCP_EVENT_WAIT_FOR_CKPT:
+
   case DMTCP_EVENT_EXIT:
   case DMTCP_EVENT_PTHREAD_EXIT:
   case DMTCP_EVENT_PTHREAD_RETURN:

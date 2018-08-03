@@ -80,6 +80,8 @@ static pthread_mutex_t uninitializedThreadCountLock = PTHREAD_MUTEX_INITIALIZER;
 static int _uninitializedThreadCount = 0;
 static bool _checkpointThreadInitialized = false;
 
+#define INVALID_USER_THREAD_COUNT 0
+static int preResumeThreadCount = INVALID_USER_THREAD_COUNT;
 static pthread_mutex_t preResumeThreadCountLock = PTHREAD_MUTEX_INITIALIZER;
 
 static __thread int _wrapperExecutionLockLockCount = 0;
@@ -648,4 +650,17 @@ ThreadSync::threadFinishedInitialization()
   _hasThreadFinishedInitialization = false;
   decrementUninitializedThreadCount();
   _hasThreadFinishedInitialization = true;
+}
+
+void ThreadSync::incrNumUserThreads()
+{
+  // This routine is called from within stopthisthread so it is not safe to
+  // call JNOTE/JLOG(DMTCP) etc.
+  if (_real_pthread_mutex_lock(&preResumeThreadCountLock) != 0) {
+    JASSERT(false) .Text("Failed to acquire preResumeThreadCountLock");
+  }
+  preResumeThreadCount++;
+  if (_real_pthread_mutex_unlock(&preResumeThreadCountLock) != 0) {
+    JASSERT(false) .Text("Failed to release preResumeThreadCountLock");
+  }
 }

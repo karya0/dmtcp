@@ -607,6 +607,12 @@ stopthisthread(int signum)
       /* Tell the checkpoint thread that we're all saved away */
       JASSERT(Thread_UpdateState(curThread, ST_SUSPENDED, ST_SUSPINPROG));
       sem_post(&semNotifyCkptThread);
+      /* This sets a static variable in dmtcp.  It must be passed
+      * from this user thread to ckpt thread before writing ckpt image
+      */
+      if (dmtcp_ptrace_enabled != NULL && dmtcp_ptrace_enabled()) {
+        DmtcpWorker::preSuspendUserThread();
+      }
 
       /* Then wait for the ckpt thread to write the ckpt file then wake us up */
       JTRACE("User thread suspended") (curThread->tid);

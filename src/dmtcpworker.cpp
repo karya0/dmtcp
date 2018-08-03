@@ -472,7 +472,11 @@ DmtcpWorker::waitForSuspendMessage()
 
   _exitAfterCkpt = msg.exitAfterCkpt;
 }
-
+void
+DmtcpWorker::preSuspendUserThread(){
+  ThreadSync::incrNumUserThreads();
+  PluginManager::eventHook(DMTCP_EVENT_PRE_SUSPEND_USER_THREAD, NULL);
+}
 void
 DmtcpWorker::acknowledgeSuspendMsg()
 {
@@ -505,9 +509,11 @@ DmtcpWorker::waitForCheckpointRequest()
   WorkerState::setCurrentState(WorkerState::RUNNING);
 
   waitForSuspendMessage();
-
+  PluginManager::eventHook(DMTCP_EVENT_WAIT_FOR_CKPT, NULL);
   JTRACE("got SUSPEND message, preparing to acquire all ThreadSync locks");
   ThreadSync::acquireLocks();
+
+
 
   JTRACE("Starting checkpoint, suspending...");
 }

@@ -51,6 +51,7 @@ class DmtcpWorker
     static void waitForCheckpointRequest();
     static void preCheckpoint();
     static void postCheckpoint();
+    static void preSuspendUserThread();
     static void postRestart(double ckptReadTime = 0.0);
 
     static void resetOnFork();

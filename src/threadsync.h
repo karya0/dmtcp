@@ -89,6 +89,9 @@ bool isThreadPerformingDlopenDlsym();
 void setThreadPerformingDlopenDlsym();
 void unsetThreadPerformingDlopenDlsym();
 #endif // if TRACK_DLOPEN_DLSYM_FOR_LOCKS
+void incrNumUserThreads();
+void processPreResumeCB();
+void waitForUserThreadsToFinishPreResumeCB();
 }
 }
 #endif // ifndef THREADSYNC_H
