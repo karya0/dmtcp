@@ -10,6 +10,49 @@ dmtcp_EventConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data)
   EventConnList::instance().eventHook(event, data);
 }
 
+
+static DmtcpBarrier eventBarriers[] = {
+  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, EventConnList::saveOptions, "PRE_CKPT" },
+  { DMTCP_LOCAL_BARRIER_PRE_CKPT, EventConnList::leaderElection,
+    "LEADER_ELECTION" },
+  { DMTCP_LOCAL_BARRIER_PRE_CKPT, EventConnList::drainFd, "DRAIN" },
+  { DMTCP_LOCAL_BARRIER_PRE_CKPT, EventConnList::ckpt, "WRITE_CKPT" },
+
+  { DMTCP_PRIVATE_BARRIER_RESUME, EventConnList::resumeRefill,
+    "RESUME_REFILL" },
+  { DMTCP_LOCAL_BARRIER_RESUME, EventConnList::resumeResume, "RESUME_RESUME" },
+
+  { DMTCP_PRIVATE_BARRIER_RESTART, EventConnList::restart,
+    "RESTART_POST_RESTART" },
+
+  // We might be able to mark the next barrier as PRIVATE too.
+  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartRegisterNSData,
+    "RESTART_NS_REGISTER_DATA" },
+  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartSendQueries,
+    "RESTART_NS_SEND_QUERIES" },
+  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartRefill,
+    "RESTART_REFILL" },
+  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartResume,
+    "RESTART_RESUME" }
+};
+
+DmtcpPluginDescriptor_t eventPlugin = {
+  DMTCP_PLUGIN_API_VERSION,
+  PACKAGE_VERSION,
+  "event",
+  "DMTCP",
+  "dmtcp@ccs.neu.edu",
+  "Event plugin",
+  DMTCP_DECL_BARRIERS(eventBarriers),
+  dmtcp_EventConnList_EventHook
+};
+
+void
+ipc_initialize_plugin_event()
+{
+  dmtcp_register_plugin(eventPlugin);
+}
+
 void
 dmtcp_EventConn_ProcessFdEvent(int event, int arg1, int arg2)
 {

@@ -30,190 +30,23 @@
 
 #include "event/eventconnlist.h"
 #include "file/fileconnlist.h"
+#include "file/filewrappers.h"
 #include "file/ptyconnlist.h"
 #include "socket/socketconnlist.h"
 #include "ssh/ssh.h"
 
 using namespace dmtcp;
 
-void dmtcp_SSH_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data);
-void dmtcp_FileConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data);
-void dmtcp_PtyConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data);
-void dmtcp_SocketConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data);
-void dmtcp_EventConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data);
+void ipc_initialize_plugin_socket();
+void ipc_initialize_plugin_file();
+void ipc_initialize_plugin_pty();
+void ipc_initialize_plugin_event();
+void ipc_initialize_plugin_ssh();
 
 void dmtcp_FileConn_ProcessFdEvent(int event, int arg1, int arg2);
 void dmtcp_PtyConn_ProcessFdEvent(int event, int arg1, int arg2);
 void dmtcp_SocketConn_ProcessFdEvent(int event, int arg1, int arg2);
 void dmtcp_EventConn_ProcessFdEvent(int event, int arg1, int arg2);
-static void
-ipc_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
-{
-  dmtcp_SSH_EventHook(event, data);
-  dmtcp_FileConnList_EventHook(event, data);
-  dmtcp_PtyConnList_EventHook(event, data);
-  dmtcp_SocketConnList_EventHook(event, data);
-  dmtcp_EventConnList_EventHook(event, data);
-}
-
-static DmtcpBarrier fileBarriers[] = {
-  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, FileConnList::saveOptions, "PRE_CKPT" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, FileConnList::leaderElection,
-    "LEADER_ELECTION" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, FileConnList::drainFd, "DRAIN" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, FileConnList::ckpt, "WRITE_CKPT" },
-
-  { DMTCP_PRIVATE_BARRIER_RESUME, FileConnList::resumeRefill, "RESUME_REFILL" },
-  { DMTCP_LOCAL_BARRIER_RESUME, FileConnList::resumeResume, "RESUME_RESUME" },
-
-  { DMTCP_PRIVATE_BARRIER_RESTART, FileConnList::restart,
-    "RESTART_POST_RESTART" },
-
-  // We might be able to mark the next barrier as PRIVATE too.
-  { DMTCP_LOCAL_BARRIER_RESTART, FileConnList::restartRegisterNSData,
-    "RESTART_NS_REGISTER_DATA" },
-  { DMTCP_LOCAL_BARRIER_RESTART, FileConnList::restartSendQueries,
-    "RESTART_NS_SEND_QUERIES" },
-  { DMTCP_LOCAL_BARRIER_RESTART, FileConnList::restartRefill,
-    "RESTART_REFILL" },
-  { DMTCP_LOCAL_BARRIER_RESTART, FileConnList::restartResume, "RESTART_RESUME" }
-};
-
-static DmtcpBarrier ptyBarriers[] = {
-  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, PtyConnList::drainFd, "DRAIN" },
-
-  { DMTCP_PRIVATE_BARRIER_RESUME, PtyConnList::resumeRefill, "RESUME_REFILL" },
-
-  { DMTCP_PRIVATE_BARRIER_RESTART, PtyConnList::restart,
-    "RESTART_POST_RESTART" },
-  { DMTCP_LOCAL_BARRIER_RESTART, PtyConnList::restartRefill, "RESTART_REFILL" }
-};
-
-static DmtcpBarrier socketBarriers[] = {
-  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, SocketConnList::saveOptions, "PRE_CKPT" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, SocketConnList::leaderElection,
-    "LEADER_ELECTION" },
-  { DMTCP_GLOBAL_BARRIER_PRE_CKPT, SocketConnList::ckptRegisterNSData,
-    "CKPT_REGISTER_PEER_INFO" },
-  { DMTCP_GLOBAL_BARRIER_PRE_CKPT, SocketConnList::ckptSendQueries,
-    "CKPT_RETRIEVE_PEER_INFO" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, SocketConnList::drainFd, "DRAIN" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, SocketConnList::ckpt, "WRITE_CKPT" },
-
-  { DMTCP_PRIVATE_BARRIER_RESUME, SocketConnList::resumeRefill,
-    "RESUME_REFILL" },
-  { DMTCP_LOCAL_BARRIER_RESUME, SocketConnList::resumeResume, "RESUME_RESUME" },
-
-  { DMTCP_PRIVATE_BARRIER_RESTART, SocketConnList::restart,
-    "RESTART_POST_RESTART" },
-
-  // We might be able to mark the next barrier as PRIVATE too.
-  { DMTCP_LOCAL_BARRIER_RESTART, SocketConnList::restartRegisterNSData,
-    "RESTART_NS_REGISTER_DATA" },
-  { DMTCP_GLOBAL_BARRIER_RESTART, SocketConnList::restartSendQueries,
-    "RESTART_NS_SEND_QUERIES" },
-  { DMTCP_LOCAL_BARRIER_RESTART, SocketConnList::restartRefill,
-    "RESTART_REFILL" },
-  { DMTCP_LOCAL_BARRIER_RESTART, SocketConnList::restartResume,
-    "RESTART_RESUME" }
-};
-
-static DmtcpBarrier eventBarriers[] = {
-  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, EventConnList::saveOptions, "PRE_CKPT" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, EventConnList::leaderElection,
-    "LEADER_ELECTION" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, EventConnList::drainFd, "DRAIN" },
-  { DMTCP_LOCAL_BARRIER_PRE_CKPT, EventConnList::ckpt, "WRITE_CKPT" },
-
-  { DMTCP_PRIVATE_BARRIER_RESUME, EventConnList::resumeRefill,
-    "RESUME_REFILL" },
-  { DMTCP_LOCAL_BARRIER_RESUME, EventConnList::resumeResume, "RESUME_RESUME" },
-
-  { DMTCP_PRIVATE_BARRIER_RESTART, EventConnList::restart,
-    "RESTART_POST_RESTART" },
-
-  // We might be able to mark the next barrier as PRIVATE too.
-  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartRegisterNSData,
-    "RESTART_NS_REGISTER_DATA" },
-  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartSendQueries,
-    "RESTART_NS_SEND_QUERIES" },
-  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartRefill,
-    "RESTART_REFILL" },
-  { DMTCP_LOCAL_BARRIER_RESTART, EventConnList::restartResume,
-    "RESTART_RESUME" }
-};
-
-static DmtcpBarrier sshBarriers[] = {
-  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, dmtcp_ssh_drain, "DRAIN" },
-  { DMTCP_PRIVATE_BARRIER_RESUME, dmtcp_ssh_resume, "RESUME" },
-  { DMTCP_PRIVATE_BARRIER_RESTART, dmtcp_ssh_restart, "RESTART" }
-};
-
-DmtcpPluginDescriptor_t sshPlugin = {
-  DMTCP_PLUGIN_API_VERSION,
-  PACKAGE_VERSION,
-  "ssh",
-  "DMTCP",
-  "dmtcp@ccs.neu.edu",
-  "SSH plugin",
-  DMTCP_DECL_BARRIERS(sshBarriers),
-  dmtcp_SSH_EventHook
-};
-
-DmtcpPluginDescriptor_t filePlugin = {
-  DMTCP_PLUGIN_API_VERSION,
-  PACKAGE_VERSION,
-  "file",
-  "DMTCP",
-  "dmtcp@ccs.neu.edu",
-  "File plugin",
-  DMTCP_DECL_BARRIERS(fileBarriers),
-  dmtcp_FileConnList_EventHook
-};
-
-DmtcpPluginDescriptor_t ptyPlugin = {
-  DMTCP_PLUGIN_API_VERSION,
-  PACKAGE_VERSION,
-  "file",
-  "DMTCP",
-  "dmtcp@ccs.neu.edu",
-  "PTY plugin",
-  DMTCP_DECL_BARRIERS(ptyBarriers),
-  dmtcp_PtyConnList_EventHook
-};
-
-DmtcpPluginDescriptor_t socketPlugin = {
-  DMTCP_PLUGIN_API_VERSION,
-  PACKAGE_VERSION,
-  "socket",
-  "DMTCP",
-  "dmtcp@ccs.neu.edu",
-  "Socket plugin",
-  DMTCP_DECL_BARRIERS(socketBarriers),
-  dmtcp_SocketConnList_EventHook
-};
-
-DmtcpPluginDescriptor_t eventPlugin = {
-  DMTCP_PLUGIN_API_VERSION,
-  PACKAGE_VERSION,
-  "event",
-  "DMTCP",
-  "dmtcp@ccs.neu.edu",
-  "Event plugin",
-  DMTCP_DECL_BARRIERS(eventBarriers),
-  dmtcp_EventConnList_EventHook
-};
-
-DmtcpPluginDescriptor_t ipcPlugin = {
-  DMTCP_PLUGIN_API_VERSION,
-  PACKAGE_VERSION,
-  "ipc",
-  "DMTCP",
-  "dmtcp@ccs.neu.edu",
-  "IPC virtualization plugin",
-  DMTCP_NO_PLUGIN_BARRIERS,
-  ipc_event_hook
-};
 
 EXTERNC void
 dmtcp_initialize_plugin()
@@ -229,11 +62,12 @@ dmtcp_initialize_plugin()
    *    relies on the out-of-band socket to be restored in order to determine
    *    the current network address of the remote ssh-child.
    */
-  dmtcp_register_plugin(sshPlugin);
-  dmtcp_register_plugin(eventPlugin);
-  dmtcp_register_plugin(filePlugin);
-  dmtcp_register_plugin(ptyPlugin);
-  dmtcp_register_plugin(socketPlugin);
+
+  ipc_initialize_plugin_ssh();
+  ipc_initialize_plugin_event();
+  ipc_initialize_plugin_file();
+  ipc_initialize_plugin_pty();
+  ipc_initialize_plugin_socket();
 
   void (*fn)() = NEXT_FNC(dmtcp_initialize_plugin);
   if (fn != NULL) {

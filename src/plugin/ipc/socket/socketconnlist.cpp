@@ -11,6 +11,7 @@
 #include "util.h"
 
 using namespace dmtcp;
+
 static bool _hasIPv4Sock = false;
 static bool _hasIPv6Sock = false;
 static bool _hasUNIXSock = false;
@@ -19,6 +20,52 @@ void
 dmtcp_SocketConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data)
 {
   SocketConnList::instance().eventHook(event, data);
+}
+
+static DmtcpBarrier socketBarriers[] = {
+  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, SocketConnList::saveOptions, "PRE_CKPT" },
+  { DMTCP_LOCAL_BARRIER_PRE_CKPT, SocketConnList::leaderElection,
+    "LEADER_ELECTION" },
+  { DMTCP_GLOBAL_BARRIER_PRE_CKPT, SocketConnList::ckptRegisterNSData,
+    "CKPT_REGISTER_PEER_INFO" },
+  { DMTCP_GLOBAL_BARRIER_PRE_CKPT, SocketConnList::ckptSendQueries,
+    "CKPT_RETRIEVE_PEER_INFO" },
+  { DMTCP_LOCAL_BARRIER_PRE_CKPT, SocketConnList::drainFd, "DRAIN" },
+  { DMTCP_LOCAL_BARRIER_PRE_CKPT, SocketConnList::ckpt, "WRITE_CKPT" },
+
+  { DMTCP_PRIVATE_BARRIER_RESUME, SocketConnList::resumeRefill,
+    "RESUME_REFILL" },
+  { DMTCP_LOCAL_BARRIER_RESUME, SocketConnList::resumeResume, "RESUME_RESUME" },
+
+  { DMTCP_PRIVATE_BARRIER_RESTART, SocketConnList::restart,
+    "RESTART_POST_RESTART" },
+
+  // We might be able to mark the next barrier as PRIVATE too.
+  { DMTCP_LOCAL_BARRIER_RESTART, SocketConnList::restartRegisterNSData,
+    "RESTART_NS_REGISTER_DATA" },
+  { DMTCP_GLOBAL_BARRIER_RESTART, SocketConnList::restartSendQueries,
+    "RESTART_NS_SEND_QUERIES" },
+  { DMTCP_LOCAL_BARRIER_RESTART, SocketConnList::restartRefill,
+    "RESTART_REFILL" },
+  { DMTCP_LOCAL_BARRIER_RESTART, SocketConnList::restartResume,
+    "RESTART_RESUME" }
+};
+
+DmtcpPluginDescriptor_t socketPlugin = {
+  DMTCP_PLUGIN_API_VERSION,
+  PACKAGE_VERSION,
+  "socket",
+  "DMTCP",
+  "dmtcp@ccs.neu.edu",
+  "Socket plugin",
+  DMTCP_DECL_BARRIERS(socketBarriers),
+  dmtcp_SocketConnList_EventHook
+};
+
+void
+ipc_initialize_plugin_socket()
+{
+  dmtcp_register_plugin(socketPlugin);
 }
 
 void

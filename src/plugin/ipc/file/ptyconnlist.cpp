@@ -38,6 +38,34 @@ dmtcp_PtyConnList_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data)
   PtyConnList::instance().eventHook(event, data);
 }
 
+
+static DmtcpBarrier ptyBarriers[] = {
+  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, PtyConnList::drainFd, "DRAIN" },
+
+  { DMTCP_PRIVATE_BARRIER_RESUME, PtyConnList::resumeRefill, "RESUME_REFILL" },
+
+  { DMTCP_PRIVATE_BARRIER_RESTART, PtyConnList::restart,
+    "RESTART_POST_RESTART" },
+  { DMTCP_LOCAL_BARRIER_RESTART, PtyConnList::restartRefill, "RESTART_REFILL" }
+};
+
+DmtcpPluginDescriptor_t ptyPlugin = {
+  DMTCP_PLUGIN_API_VERSION,
+  PACKAGE_VERSION,
+  "file",
+  "DMTCP",
+  "dmtcp@ccs.neu.edu",
+  "PTY plugin",
+  DMTCP_DECL_BARRIERS(ptyBarriers),
+  dmtcp_PtyConnList_EventHook
+};
+
+void
+ipc_initialize_plugin_pty()
+{
+  dmtcp_register_plugin(ptyPlugin);
+}
+
 void
 dmtcp_PtyConn_ProcessFdEvent(int event, int arg1, int arg2)
 {

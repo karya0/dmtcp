@@ -47,6 +47,30 @@ void
 dmtcp_SSH_EventHook(DmtcpEvent_t event, DmtcpEventData_t *data)
 {}
 
+
+static DmtcpBarrier sshBarriers[] = {
+  { DMTCP_PRIVATE_BARRIER_PRE_CKPT, dmtcp_ssh_drain, "DRAIN" },
+  { DMTCP_PRIVATE_BARRIER_RESUME, dmtcp_ssh_resume, "RESUME" },
+  { DMTCP_PRIVATE_BARRIER_RESTART, dmtcp_ssh_restart, "RESTART" }
+};
+
+DmtcpPluginDescriptor_t sshPlugin = {
+  DMTCP_PLUGIN_API_VERSION,
+  DMTCP_PACKAGE_VERSION,
+  "ssh",
+  "DMTCP",
+  "dmtcp@ccs.neu.edu",
+  "SSH plugin",
+  DMTCP_DECL_BARRIERS(sshBarriers),
+  dmtcp_SSH_EventHook
+};
+
+void
+ipc_initialize_plugin_ssh()
+{
+  dmtcp_register_plugin(sshPlugin);
+}
+
 void
 dmtcp_ssh_drain()
 {
