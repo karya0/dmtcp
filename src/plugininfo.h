@@ -57,6 +57,8 @@ class PluginInfo
     const vector<BarrierInfo *>resumeBarriers;
     const vector<BarrierInfo *>restartBarriers;
 
+    DmtcpWrappers *wrappers;
+
   private:
     PluginInfo(const DmtcpPluginDescriptor_t &descr,
                const vector<BarrierInfo *> &_preSuspendBarriers,

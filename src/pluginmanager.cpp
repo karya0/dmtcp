@@ -23,6 +23,8 @@ dmtcp_register_plugin(DmtcpPluginDescriptor_t descr)
 
 namespace dmtcp
 {
+static DmtcpWrappers localWrappers;
+
 DmtcpPluginDescriptor_t dmtcp_Syslog_PluginDescr();
 DmtcpPluginDescriptor_t dmtcp_Rlimit_Float_PluginDescr();
 DmtcpPluginDescriptor_t dmtcp_Alarm_PluginDescr();
@@ -38,16 +40,34 @@ PluginManager::initialize()
 
   // Now initialize plugins.
   // Call into other plugins to have them register with us.
-  if (dmtcp_initialize_plugin != NULL) {
-    dmtcp_initialize_plugin();
+  dmtcp_initialize_plugin();
+
+  localWrappers.open = NULL;
+  localWrappers.real_open = _real_open;
+
+  // Initialize wrappers.
+  DmtcpWrappers currentWrappers = localWrappers;
+
+  // Calculate and update real funcs.
+  for (int i = pluginManager->pluginInfos.size() - 1; i >= 0; i--) {
+    DmtcpWrappers *wrappers = pluginManager->pluginInfos[i]->wrappers;
+
+    if (!wrappers) {
+      continue;
+    }
+
+#define CALC_REAL_FUNC(func, type)                          \
+    wrappers->real_##func = currentWrappers.real_##func;    \
+    if (wrappers->func != NULL) {                           \
+      currentWrappers.real_##func = wrappers->func;         \
+    }
+
+    FOREACH_DMTCP_WRAPPER_2(CALC_REAL_FUNC)
   }
 
   // Register plugin list with coordinator.
   registerBarriersWithCoordinator();
 }
-
-PluginManager::PluginManager()
-{}
 
 void
 PluginManager::registerPlugin(DmtcpPluginDescriptor_t descr)

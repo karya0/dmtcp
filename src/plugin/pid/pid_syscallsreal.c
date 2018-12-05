@@ -452,7 +452,8 @@ _real_open(const char *path, int flags, ...)
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  REAL_FUNC_PASSTHROUGH(open) (path, flags, mode);
+  return pidWrappers.real_open(path, flags, mode);
+  //REAL_FUNC_PASSTHROUGH(open) (path, flags, mode);
 }
 
 int

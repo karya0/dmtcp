@@ -100,8 +100,8 @@ updateProcPathRealToVirtual(const char *path, char **newpath)
 
 /* Used by open() wrapper to do other tracking of open apart from
    synchronization stuff. */
-extern "C" int
-open(const char *path, int flags, ...)
+int
+pid_open(const char *path, int flags, ...)
 {
   mode_t mode = 0;
 

@@ -18,7 +18,9 @@
 #include <netinet/ip.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #ifndef __USE_GNU
@@ -106,6 +108,25 @@ typedef struct {
   const char *id;
 } DmtcpBarrier;
 
+#define FOREACH_DMTCP_WRAPPER_2(MACRO) \
+  MACRO(open, int (*)(const char*, int, ...))
+
+#define DMTCP_GEN_ENUM(x, type) DMTCP_WRAPPER_ ## x,
+typedef enum {
+  FOREACH_DMTCP_WRAPPER_2(DMTCP_GEN_ENUM)
+  numDmtcpWrappers
+} DmtcpWrapperType;
+
+#define DMTCP_GEN_FPTR(x, type)                     \
+  struct {                                          \
+    __typeof__(type) x;                             \
+    __typeof__(type) real_ ## x;                     \
+  };
+
+typedef struct {
+  FOREACH_DMTCP_WRAPPER_2(DMTCP_GEN_FPTR)
+} DmtcpWrappers;
+
 typedef void (*HookFunctionPtr_t)(DmtcpEvent_t, DmtcpEventData_t *);
 
 typedef struct {
@@ -121,6 +142,8 @@ typedef struct {
   DmtcpBarrier *barriers;
 
   void (*event_hook)(const DmtcpEvent_t event, DmtcpEventData_t *data);
+
+  DmtcpWrappers *wrappers;
 } DmtcpPluginDescriptor_t;
 
 // Used by dmtcp_get_restart_env()
@@ -460,6 +483,7 @@ int dmtcp_must_overwrite_file(const char *path) __attribute((weak));
 void dmtcp_initialize(void) __attribute((weak));
 
 void dmtcp_register_plugin(DmtcpPluginDescriptor_t);
+
 
 // These are part of the internal implementation of DMTCP plugins
 int dmtcp_plugin_disable_ckpt(void);

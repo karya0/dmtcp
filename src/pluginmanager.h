@@ -39,7 +39,7 @@ class PluginManager
 
     static void operator delete(void *p) { JALLOC_HELPER_DELETE(p); }
 #endif // ifdef JALIB_ALLOCATOR
-    PluginManager();
+    PluginManager() {}
 
     void registerPlugin(DmtcpPluginDescriptor_t descr);
 

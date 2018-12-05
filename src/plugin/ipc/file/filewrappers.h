@@ -25,7 +25,11 @@
 
 #include "dmtcp.h"
 
-# define _real_open            NEXT_FNC(open)
+extern DmtcpWrappers fileWrappers;
+
+int file_open(const char *path, int flags, ...);
+
+# define _real_open            fileWrappers.real_open
 # define _real_open64          NEXT_FNC(open64)
 # define _real_fopen           NEXT_FNC(fopen)
 # define _real_fopen64         NEXT_FNC(fopen64)

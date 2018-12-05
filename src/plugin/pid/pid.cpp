@@ -37,6 +37,8 @@ extern "C" pid_t dmtcp_update_ppid();
 
 static string pidMapFile;
 
+DmtcpWrappers pidWrappers;
+
 #ifdef ENABLE_PTHREAD_MUTEX_WRAPPERS
 dmtcp::map<pthread_mutex_t *, pid_t>&
 mapMutexVirtTid()
@@ -287,7 +289,8 @@ DmtcpPluginDescriptor_t pidPlugin = {
   "dmtcp@ccs.neu.edu",
   "PID virtualization plugin",
   DMTCP_DECL_BARRIERS(pidBarriers),
-  pid_event_hook
+  pid_event_hook,
+  &pidWrappers
 };
 
 DMTCP_DECL_PLUGIN(pidPlugin);

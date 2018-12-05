@@ -109,6 +109,8 @@ static DmtcpBarrier fileBarriers[] = {
   { DMTCP_LOCAL_BARRIER_RESTART, FileConnList::restartResume, "RESTART_RESUME" }
 };
 
+DmtcpWrappers fileWrappers = {NULL};
+
 DmtcpPluginDescriptor_t filePlugin = {
   DMTCP_PLUGIN_API_VERSION,
   PACKAGE_VERSION,
@@ -117,12 +119,15 @@ DmtcpPluginDescriptor_t filePlugin = {
   "dmtcp@ccs.neu.edu",
   "File plugin",
   DMTCP_DECL_BARRIERS(fileBarriers),
-  dmtcp_FileConnList_EventHook
+  dmtcp_FileConnList_EventHook,
+  &fileWrappers
 };
 
 void
 ipc_initialize_plugin_file()
 {
+  fileWrappers.open = file_open;
+
   dmtcp_register_plugin(filePlugin);
 }
 

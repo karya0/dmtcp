@@ -119,8 +119,8 @@ _open_open64_work(int (*fn)(const char *path,
 
 /* Used by open() wrapper to do other tracking of open apart from
    synchronization stuff. */
-extern "C" int
-open(const char *path, int flags, ...)
+int
+file_open(const char *path, int flags, ...)
 {
   mode_t mode = 0;
 
