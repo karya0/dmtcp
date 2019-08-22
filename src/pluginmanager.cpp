@@ -23,7 +23,8 @@ dmtcp_register_plugin(DmtcpPluginDescriptor_t descr)
 
 namespace dmtcp
 {
-static DmtcpWrappers localWrappers;
+// Initialize wrappers.
+DmtcpWrappers localWrappers;
 
 DmtcpPluginDescriptor_t dmtcp_Syslog_PluginDescr();
 DmtcpPluginDescriptor_t dmtcp_Rlimit_Float_PluginDescr();
@@ -42,11 +43,17 @@ PluginManager::initialize()
   // Call into other plugins to have them register with us.
   dmtcp_initialize_plugin();
 
-  localWrappers.open = NULL;
-  localWrappers.real_open = _real_open;
+#define INIT_LOCAL_WRAPPERS(func, type)                     \
+    localWrappers.func = NULL;                              \
+    localWrappers.real_##func = _real_##func;
 
-  // Initialize wrappers.
-  DmtcpWrappers currentWrappers = localWrappers;
+  FOREACH_DMTCP_WRAPPER_2(INIT_LOCAL_WRAPPERS)
+
+#define CALC_REAL_FUNC(func, type)                          \
+    wrappers->real_##func = localWrappers.real_##func;      \
+    if (wrappers->func != NULL) {                           \
+      localWrappers.real_##func = wrappers->func;           \
+    }
 
   // Calculate and update real funcs.
   for (int i = pluginManager->pluginInfos.size() - 1; i >= 0; i--) {
@@ -54,12 +61,6 @@ PluginManager::initialize()
 
     if (!wrappers) {
       continue;
-    }
-
-#define CALC_REAL_FUNC(func, type)                          \
-    wrappers->real_##func = currentWrappers.real_##func;    \
-    if (wrappers->func != NULL) {                           \
-      currentWrappers.real_##func = wrappers->func;         \
     }
 
     FOREACH_DMTCP_WRAPPER_2(CALC_REAL_FUNC)

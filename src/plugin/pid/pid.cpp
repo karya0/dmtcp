@@ -293,4 +293,17 @@ DmtcpPluginDescriptor_t pidPlugin = {
   &pidWrappers
 };
 
-DMTCP_DECL_PLUGIN(pidPlugin);
+
+EXTERNC void
+dmtcp_initialize_plugin()
+{
+  pidWrappers.open = pid_open;
+
+  dmtcp_register_plugin(pidPlugin);
+
+  void (*fn)() = NEXT_FNC(dmtcp_initialize_plugin);
+  if (fn != NULL) {
+    (*fn)();
+  }
+}
+

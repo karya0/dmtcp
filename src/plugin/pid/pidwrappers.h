@@ -270,6 +270,7 @@ long _real_ptrace(enum __ptrace_request request,
 void _real_pthread_exit(void *retval);
 int _real_fcntl(int fd, int cmd, void *arg);
 
+int pid_open(const char *pathname, int flags, ...);
 int _real_open(const char *pathname, int flags, ...);
 int _real_open64(const char *pathname, int flags, ...);
 int _real_close(int fd);

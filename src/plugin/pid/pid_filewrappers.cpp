@@ -32,8 +32,6 @@
  *     In general, we rename the functions below, since any type declarations
  * may vary on different systems, and so we ignore these type declarations.
  */
-#define open     open_always_inline
-#define open64   open64_always_inline
 #define readlink readlink_always_inline
 #define realpath realpath_always_inline
 
@@ -42,8 +40,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
-#undef open
-#undef open64
 #undef readlink
 #undef realpath
 
@@ -115,26 +111,7 @@ pid_open(const char *path, int flags, ...)
   char tmpbuf[PATH_MAX];
   char *newpath = tmpbuf;
   updateProcPathVirtualToReal(path, &newpath);
-  return _real_open(newpath, flags, mode);
-}
-
-// FIXME: Add the 'fn64' wrapper test cases to dmtcp test suite.
-extern "C" int
-open64(const char *path, int flags, ...)
-{
-  mode_t mode = 0;
-
-  // Handling the variable number of arguments
-  if (flags & O_CREAT) {
-    va_list arg;
-    va_start(arg, flags);
-    mode = va_arg(arg, int);
-    va_end(arg);
-  }
-  char tmpbuf[PATH_MAX];
-  char *newpath = tmpbuf;
-  updateProcPathVirtualToReal(path, &newpath);
-  return _real_open64(newpath, flags, mode);
+  return pidWrappers.real_open(newpath, flags, mode);
 }
 
 extern "C" FILE * fopen(const char *path, const char *mode)

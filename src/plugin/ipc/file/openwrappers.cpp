@@ -75,6 +75,8 @@
 
 using namespace dmtcp;
 
+extern DmtcpWrappers fileWrappers;
+
 static void
 processConnection(int fd, const char *path, int flags, mode_t mode)
 {
@@ -91,34 +93,7 @@ processConnection(int fd, const char *path, int flags, mode_t mode)
   }
 }
 
-static int
-_open_open64_work(int (*fn)(const char *path,
-                            int flags,
-                            ...), const char *path, int flags, mode_t mode)
-{
-  char currPtsDevName[32];
-  const char *newpath = path;
 
-  DMTCP_PLUGIN_DISABLE_CKPT();
-
-  if (Util::strStartsWith(path, VIRT_PTS_PREFIX_STR)) {
-    SharedData::getRealPtyName(path, currPtsDevName, sizeof(currPtsDevName));
-    newpath = currPtsDevName;
-  }
-
-  int fd = (*fn)(newpath, flags, mode);
-
-  if (fd >= 0 && dmtcp_is_running_state()) {
-    processConnection(fd, newpath, flags, mode);
-  }
-
-  DMTCP_PLUGIN_ENABLE_CKPT();
-
-  return fd;
-}
-
-/* Used by open() wrapper to do other tracking of open apart from
-   synchronization stuff. */
 int
 file_open(const char *path, int flags, ...)
 {
@@ -131,43 +106,24 @@ file_open(const char *path, int flags, ...)
     mode = va_arg(arg, int);
     va_end(arg);
   }
-  return _open_open64_work(_real_open, path, flags, mode);
-}
 
-extern "C" int
-__open_2(const char *path, int flags)
-{
-  return _open_open64_work(_real_open, path, flags, 0);
-}
+  char currPtsDevName[32];
+  const char *newpath = path;
 
-// FIXME: The 'fn64' version of functions is defined only when within
-// __USE_LARGEFILE64 is #defined. The wrappers in this file need to consider
-// this fact. The problem can occur, for example, when DMTCP is not compiled
-// with __USE_LARGEFILE64 whereas the user-binary is. In that case the open64()
-// call from user will come to DMTCP and DMTCP might fail to execute it
-// properly.
-
-// FIXME: Add the 'fn64' wrapper test cases to dmtcp test suite.
-extern "C" int
-open64(const char *path, int flags, ...)
-{
-  mode_t mode = 0;
-
-  // Handling the variable number of arguments
-  if (flags & O_CREAT) {
-    va_list arg;
-    va_start(arg, flags);
-    mode = va_arg(arg, int);
-    va_end(arg);
+  if (Util::strStartsWith(path, VIRT_PTS_PREFIX_STR)) {
+    SharedData::getRealPtyName(path, currPtsDevName, sizeof(currPtsDevName));
+    newpath = currPtsDevName;
   }
-  return _open_open64_work(_real_open64, path, flags, mode);
+
+  int fd = fileWrappers.real_open(newpath, flags, mode);
+
+  if (fd >= 0 && dmtcp_is_running_state()) {
+    processConnection(fd, newpath, flags, mode);
+  }
+
+  return fd;
 }
 
-extern "C" int
-__open64_2(const char *path, int flags)
-{
-  return _open_open64_work(_real_open64, path, flags, 0);
-}
 
 static FILE *
 _fopen_fopen64_work(FILE *(*fn)(const char *path,
@@ -294,8 +250,7 @@ creat(const char *path, mode_t mode)
 {
   // creat() is equivalent to open() with flags equal to
   // O_CREAT|O_WRONLY|O_TRUNC
-  return _open_open64_work(_real_open, path, O_CREAT | O_WRONLY | O_TRUNC,
-                           mode);
+  return file_open(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
 }
 
 extern "C" int
@@ -303,10 +258,7 @@ creat64(const char *path, mode_t mode)
 {
   // creat() is equivalent to open() with flags equal to
   // O_CREAT|O_WRONLY|O_TRUNC
-  return _open_open64_work(_real_open64,
-                           path,
-                           O_CREAT | O_WRONLY | O_TRUNC,
-                           mode);
+  return file_open(path, O_CREAT | O_WRONLY | O_TRUNC | O_LARGEFILE, mode);
 }
 
 extern "C" void process_fd_event(int event, int arg1, int arg2 = -1);
