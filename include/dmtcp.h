@@ -108,8 +108,15 @@ typedef struct {
   const char *id;
 } DmtcpBarrier;
 
-#define FOREACH_DMTCP_WRAPPER_2(MACRO) \
-  MACRO(open, int (*)(const char*, int, ...))
+#define FOREACH_DMTCP_WRAPPER_2(MACRO)                                      \
+  MACRO(open,       int (*)(const char*, int, ...))                         \
+  MACRO(openat,     int (*)(int dirfd, const char*, int, ...))              \
+  MACRO(fopen,      FILE* (*)(const char*, const char *))                   \
+  MACRO(fopen64,    FILE* (*)(const char*, const char *))                   \
+  MACRO(freopen,    FILE* (*)(const char*, const char *, FILE *))           \
+  MACRO(freopen64,  FILE* (*)(const char*, const char *, FILE *))           \
+
+
 
 #define DMTCP_GEN_ENUM(x, type) DMTCP_WRAPPER_ ## x,
 typedef enum {

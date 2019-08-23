@@ -114,22 +114,14 @@ pid_open(const char *path, int flags, ...)
   return pidWrappers.real_open(newpath, flags, mode);
 }
 
-extern "C" FILE * fopen(const char *path, const char *mode)
+FILE *
+pid_fopen(const char *path, const char *mode)
 {
   char tmpbuf[PATH_MAX];
   char *newpath = tmpbuf;
 
   updateProcPathVirtualToReal(path, &newpath);
   return _real_fopen(newpath, mode);
-}
-
-extern "C" FILE * fopen64(const char *path, const char *mode)
-{
-  char tmpbuf[PATH_MAX];
-  char *newpath = tmpbuf;
-
-  updateProcPathVirtualToReal(path, &newpath);
-  return _real_fopen64(newpath, mode);
 }
 
 extern "C" int

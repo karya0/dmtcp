@@ -28,14 +28,10 @@
 extern DmtcpWrappers fileWrappers;
 
 int file_open(const char *path, int flags, ...);
+int file_openat(int fd, const char *path, int flags, ...);
+FILE *file_fopen(const char *path, const char *mode);
+FILE *file_freopen(const char *path, const char *mode, FILE *);
 
-# define _real_open            fileWrappers.real_open
-# define _real_open64          NEXT_FNC(open64)
-# define _real_fopen           NEXT_FNC(fopen)
-# define _real_fopen64         NEXT_FNC(fopen64)
-# define _real_freopen         NEXT_FNC(freopen)
-# define _real_openat          NEXT_FNC(openat)
-# define _real_openat64        NEXT_FNC(openat64)
 # define _real_opendir         NEXT_FNC(opendir)
 # define _real_tmpfile         NEXT_FNC(tmpfile)
 # define _real_mkstemp         NEXT_FNC(mkstemp)
@@ -64,4 +60,12 @@ int file_open(const char *path, int flags, ...);
 # define _real_fcntl           NEXT_FNC(fcntl)
 
 # define _real_system          NEXT_FNC(system)
+
+#define REAL_FNC(fn) fileWrappers.real_##fn
+
+# define _real_open            REAL_FNC(open)
+# define _real_openat          REAL_FNC(openat)
+# define _real_fopen           REAL_FNC(fopen)
+# define _real_freopen         REAL_FNC(freopen)
+
 #endif // FILE_WRAPPERS_H

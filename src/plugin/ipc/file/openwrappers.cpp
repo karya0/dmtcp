@@ -125,10 +125,30 @@ file_open(const char *path, int flags, ...)
 }
 
 
-static FILE *
-_fopen_fopen64_work(FILE *(*fn)(const char *path,
-                                const char *mode), const char *path,
-                    const char *mode)
+int
+file_openat(int dirfd, const char *path, int flags, ...)
+{
+  va_list arg;
+
+  va_start(arg, flags);
+  mode_t mode = va_arg(arg, int);
+  va_end(arg);
+
+  DMTCP_PLUGIN_DISABLE_CKPT();
+  int fd = fileWrappers.real_openat(dirfd, path, flags, mode);
+  if (fd >= 0 && dmtcp_is_running_state()) {
+    string procpath = "/proc/self/fd/" + jalib::XToString(fd);
+    string device = jalib::Filesystem::ResolveSymlink(procpath);
+    processConnection(fd, device.c_str(), flags, mode);
+  }
+  DMTCP_PLUGIN_ENABLE_CKPT();
+
+  return fd;
+}
+
+
+FILE *
+file_fopen(const char *path, const char *mode)
 {
   char currPtsDevName[32];
   const char *newpath = path;
@@ -140,7 +160,7 @@ _fopen_fopen64_work(FILE *(*fn)(const char *path,
     newpath = currPtsDevName;
   }
 
-  FILE *file = (*fn)(newpath, mode);
+  FILE *file = fileWrappers.real_fopen(newpath, mode);
 
   if (file != NULL && dmtcp_is_running_state()) {
     processConnection(fileno(file), newpath, -1, -1);
@@ -150,17 +170,8 @@ _fopen_fopen64_work(FILE *(*fn)(const char *path,
   return file;
 }
 
-extern "C" FILE * fopen(const char *path, const char *mode)
-{
-  return _fopen_fopen64_work(_real_fopen, path, mode);
-}
-
-extern "C" FILE * fopen64(const char *path, const char *mode)
-{
-  return _fopen_fopen64_work(_real_fopen64, path, mode);
-}
-
-extern "C" FILE * freopen(const char *path, const char *mode, FILE * stream)
+FILE *
+file_freopen(const char *path, const char *mode, FILE * stream)
 {
   char currPtsDevName[32];
   const char *newpath = path;
@@ -173,7 +184,7 @@ extern "C" FILE * freopen(const char *path, const char *mode, FILE * stream)
     newpath = currPtsDevName;
   }
 
-  FILE *file = _real_freopen(newpath, mode, stream);
+  FILE *file = fileWrappers.real_freopen(newpath, mode, stream);
 
   if (file != NULL && dmtcp_is_running_state()) {
     processConnection(fileno(file), newpath, -1, -1);
@@ -181,84 +192,6 @@ extern "C" FILE * freopen(const char *path, const char *mode, FILE * stream)
 
   DMTCP_PLUGIN_ENABLE_CKPT();
   return file;
-}
-
-extern "C" int
-openat(int dirfd, const char *path, int flags, ...)
-{
-  va_list arg;
-
-  va_start(arg, flags);
-  mode_t mode = va_arg(arg, int);
-  va_end(arg);
-  DMTCP_PLUGIN_DISABLE_CKPT();
-  int fd = _real_openat(dirfd, path, flags, mode);
-  if (fd >= 0 && dmtcp_is_running_state()) {
-    string procpath = "/proc/self/fd/" + jalib::XToString(fd);
-    string device = jalib::Filesystem::ResolveSymlink(procpath);
-    processConnection(fd, device.c_str(), flags, mode);
-  }
-  DMTCP_PLUGIN_ENABLE_CKPT();
-  return fd;
-}
-
-extern "C" int
-openat_2(int dirfd, const char *path, int flags)
-{
-  return openat(dirfd, path, flags, 0);
-}
-
-extern "C" int
-__openat_2(int dirfd, const char *path, int flags)
-{
-  return openat(dirfd, path, flags, 0);
-}
-
-extern "C" int
-openat64(int dirfd, const char *path, int flags, ...)
-{
-  va_list arg;
-
-  va_start(arg, flags);
-  mode_t mode = va_arg(arg, int);
-  va_end(arg);
-  DMTCP_PLUGIN_DISABLE_CKPT();
-  int fd = _real_openat64(dirfd, path, flags, mode);
-  if (fd >= 0 && dmtcp_is_running_state()) {
-    string procpath = "/proc/self/fd/" + jalib::XToString(fd);
-    string device = jalib::Filesystem::ResolveSymlink(procpath);
-    processConnection(fd, device.c_str(), flags, mode);
-  }
-  DMTCP_PLUGIN_ENABLE_CKPT();
-  return fd;
-}
-
-extern "C" int
-openat64_2(int dirfd, const char *path, int flags)
-{
-  return openat64(dirfd, path, flags, 0);
-}
-
-extern "C" int
-__openat64_2(int dirfd, const char *path, int flags)
-{
-  return openat64(dirfd, path, flags, 0);
-}
-
-extern "C" int
-creat(const char *path, mode_t mode)
-{
-  // creat() is equivalent to open() with flags equal to
-  // O_CREAT|O_WRONLY|O_TRUNC
-  return file_open(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
-}
-
-extern "C" int
-creat64(const char *path, mode_t mode)
-{
-  // creat() is equivalent to open() with flags equal to
-  // O_CREAT|O_WRONLY|O_TRUNC
-  return file_open(path, O_CREAT | O_WRONLY | O_TRUNC | O_LARGEFILE, mode);
 }
 
 extern "C" void process_fd_event(int event, int arg1, int arg2 = -1);

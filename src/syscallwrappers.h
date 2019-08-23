@@ -185,6 +185,8 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(open64)                       \
   MACRO(fopen)                        \
   MACRO(fopen64)                      \
+  MACRO(freopen)                      \
+  MACRO(freopen64)                    \
   MACRO(openat)                       \
   MACRO(openat64)                     \
   MACRO(opendir)                      \
@@ -308,8 +310,10 @@ int _real_open(const char *pathname, int flags, ...);
 int _real_open64(const char *pathname, int flags, ...);
 FILE *_real_fopen(const char *path, const char *mode);
 FILE *_real_fopen64(const char *path, const char *mode);
-int _real_openat(int dirfd, const char *pathname, int flags, mode_t mode);
-int _real_openat64(int dirfd, const char *pathname, int flags, mode_t mode);
+FILE *_real_freopen(const char *path, const char *mode, FILE *fp);
+FILE *_real_freopen64(const char *path, const char *mode, FILE *fp);
+int _real_openat(int dirfd, const char *pathname, int flags, ...);
+int _real_openat64(int dirfd, const char *pathname, int flags, ...);
 DIR *_real_opendir(const char *name);
 int _real_mkstemp(char *ttemplate);
 int _real_close(int fd);

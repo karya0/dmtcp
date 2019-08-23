@@ -104,4 +104,148 @@ __open64_2(const char *path, int flags)
   return open_work(path, flags | O_LARGEFILE, 0);
 }
 
+
+static FILE *
+fopen_work(const char *path, const char *mode)
+{
+  dmtcp_initialize_entry_point();
+
+  DMTCP_PLUGIN_DISABLE_CKPT();
+
+  FILE *fp = localWrappers.real_fopen(path, mode);
+
+  DMTCP_PLUGIN_ENABLE_CKPT();
+
+  return fp;
+}
+
+
+extern "C" FILE *
+fopen(const char *path, const char *mode)
+{
+  return fopen_work(path, mode);
+}
+
+
+extern "C" FILE *
+fopen64(const char *path, const char *mode)
+{
+  return fopen_work(path, mode);
+}
+
+
+static FILE *
+freopen_work(const char *path, const char *mode, FILE * stream)
+{
+  dmtcp_initialize_entry_point();
+
+  DMTCP_PLUGIN_DISABLE_CKPT();
+
+  FILE *file = localWrappers.real_freopen(path, mode, stream);
+
+  DMTCP_PLUGIN_ENABLE_CKPT();
+  return file;
+}
+
+
+extern "C" FILE *
+freopen(const char *path, const char *mode, FILE * stream)
+{
+  return freopen_work(path, mode, stream);
+}
+
+
+extern "C" FILE *
+freopen64(const char *path, const char *mode, FILE * stream)
+{
+  return freopen_work(path, mode, stream);
+}
+
+
+static int
+openat_work(int dirfd, const char *path, int flags, mode_t mode)
+{
+  dmtcp_initialize_entry_point();
+
+  DMTCP_PLUGIN_DISABLE_CKPT();
+
+  int fd = localWrappers.real_openat(dirfd, path, flags, mode);
+
+  DMTCP_PLUGIN_ENABLE_CKPT();
+
+  return fd;
+}
+
+
+extern "C" int
+openat(int dirfd, const char *path, int flags, ...)
+{
+  va_list arg;
+
+  va_start(arg, flags);
+  mode_t mode = va_arg(arg, int);
+  va_end(arg);
+
+  return openat_work(dirfd, path, flags, mode);
+}
+
+
+extern "C" int
+openat_2(int dirfd, const char *path, int flags)
+{
+  return openat_work(dirfd, path, flags, 0);
+}
+
+
+extern "C" int
+__openat_2(int dirfd, const char *path, int flags)
+{
+  return openat_work(dirfd, path, flags, 0);
+}
+
+
+extern "C" int
+openat64(int dirfd, const char *path, int flags, ...)
+{
+  va_list arg;
+
+  va_start(arg, flags);
+  mode_t mode = va_arg(arg, int);
+  va_end(arg);
+
+  return openat_work(dirfd, path, flags | O_LARGEFILE, mode);
+}
+
+
+extern "C" int
+openat64_2(int dirfd, const char *path, int flags)
+{
+  return openat_work(dirfd, path, flags | O_LARGEFILE, 0);
+}
+
+
+extern "C" int
+__openat64_2(int dirfd, const char *path, int flags)
+{
+  return openat_work(dirfd, path, flags | O_LARGEFILE, 0);
+}
+
+
+extern "C" int
+creat(const char *path, mode_t mode)
+{
+  // creat() is equivalent to open() with flags equal to
+  // O_CREAT|O_WRONLY|O_TRUNC
+  return open_work(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
+}
+
+
+extern "C" int
+creat64(const char *path, mode_t mode)
+{
+  // creat() is equivalent to open() with flags equal to
+  // O_CREAT|O_WRONLY|O_TRUNC
+  return open_work(path, O_CREAT | O_WRONLY | O_TRUNC | O_LARGEFILE, mode);
+}
+
 }

@@ -773,17 +773,34 @@ _real_fopen64(const char *path, const char *mode)
 }
 
 LIB_PRIVATE
-int
-_real_openat(int dirfd, const char *pathname, int flags, mode_t mode)
+FILE *
+_real_freopen(const char *path, const char *mode, FILE *fp)
 {
-  REAL_FUNC_PASSTHROUGH(openat) (dirfd, pathname, flags, mode);
+  REAL_FUNC_PASSTHROUGH_TYPED(FILE *, freopen) (path, mode, fp);
+}
+
+LIB_PRIVATE
+FILE *
+_real_freopen64(const char *path, const char *mode, FILE *fp)
+{
+  REAL_FUNC_PASSTHROUGH_TYPED(FILE *, freopen64) (path, mode, fp);
 }
 
 LIB_PRIVATE
 int
-_real_openat64(int dirfd, const char *pathname, int flags, mode_t mode)
+_real_openat(int dirfd, const char *pathname, int flags, ...)
 {
-  REAL_FUNC_PASSTHROUGH(openat64) (dirfd, pathname, flags, mode);
+  mode_t mode = 0;
+
+  // Handling the variable number of arguments
+  if (flags & O_CREAT) {
+    va_list arg;
+    va_start(arg, flags);
+    mode = va_arg(arg, int);
+    va_end(arg);
+  }
+
+  REAL_FUNC_PASSTHROUGH(openat) (dirfd, pathname, flags, mode);
 }
 
 LIB_PRIVATE
