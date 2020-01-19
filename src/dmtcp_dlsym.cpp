@@ -545,6 +545,9 @@ print_debug_messages(dt_tag tags,
 EXTERNC void *
 dmtcp_dlsym(void *handle, const char *symbol)
 {
+  // Acquire checkpoint lock.
+  dmtcp_disable_ckpt();
+
   dt_tag tags;
   Elf32_Word default_symbol_index = 0;
 
@@ -559,6 +562,7 @@ dmtcp_dlsym(void *handle, const char *symbol)
                                                        return_address, &tags,
                                                        &default_symbol_index);
     print_debug_messages(tags, default_symbol_index, symbol);
+    dmtcp_enable_ckpt();
     return result;
   }
 #endif /* ifdef __USE_GNU */
@@ -567,12 +571,16 @@ dmtcp_dlsym(void *handle, const char *symbol)
                                                         NULL, &tags,
                                                         &default_symbol_index);
   print_debug_messages(tags, default_symbol_index, symbol);
+  dmtcp_enable_ckpt();
   return result;
 }
 
 EXTERNC void *
 dmtcp_dlvsym(void *handle, char *symbol, const char *version)
 {
+  // Acquire checkpoint lock.
+  dmtcp_disable_ckpt();
+
   dt_tag tags;
   Elf32_Word default_symbol_index = 0;
 
@@ -585,6 +593,7 @@ dmtcp_dlvsym(void *handle, char *symbol, const char *version)
                                                        version,
                                                        return_address, &tags,
                                                        &default_symbol_index);
+    dmtcp_enable_ckpt();
     return result;
   }
 #endif
@@ -592,12 +601,16 @@ dmtcp_dlvsym(void *handle, char *symbol, const char *version)
   void *result = dlsym_default_internal_library_handler(handle, symbol, version,
                                                         &tags,
                                                         &default_symbol_index);
+  dmtcp_enable_ckpt();
   return result;
 }
 
 EXTERNC void *
 dmtcp_dlsym_lib(const char *libname, const char *symbol)
 {
+  // Acquire checkpoint lock.
+  dmtcp_disable_ckpt();
+
   dt_tag tags;
   Elf32_Word default_symbol_index = 0;
 
@@ -607,6 +620,7 @@ dmtcp_dlsym_lib(const char *libname, const char *symbol)
                                                      NULL,
                                                      return_address, &tags,
                                                      &default_symbol_index);
+  dmtcp_enable_ckpt();
   return result;
 }
 
